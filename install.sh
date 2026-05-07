@@ -41,23 +41,33 @@ print_logo() {
 }
 
 print_logo
-echo ""
-echo -e "Directorio destino: ${BOLD}$TARGET_DIR${NC}"
-echo ""
 
 # ─── Elegir IA ────────────────────────────────────────────────────────────────
-echo -e "${BLUE}── ¿Para qué IA querés instalar el contexto?${NC}"
-echo ""
-echo "  1) Claude Code    → crea CLAUDE.md e instala skills en .claude/skills/"
-echo "  2) Gemini CLI     → crea GEMINI.md"
-echo "  3) OpenAI Codex   → crea AGENTS.md (formato Codex)"
-echo "  4) DeepSeek       → crea DEEPSEEK.md"
-echo "  5) Cursor         → crea .cursorrules"
-echo "  6) Windsurf       → crea .windsurfrules"
-echo "  7) Genérico       → crea context.md (para pegar como system prompt)"
-echo "  8) Todas las anteriores"
-echo ""
-read -p "Opción (1-8): " ai_choice
+DIM=$'\033[2m'
+CY=$'\033[38;2;34;163;91m'
+WH=$'\033[38;2;255;255;255m'
+GY=$'\033[38;2;120;120;120m'
+BD=$'\033[1m'
+RS=$'\033[0m'
+
+printf "  %s📁 Destino:%s %s%s%s\n\n" "$GY" "$RS" "$BD" "$TARGET_DIR" "$RS"
+
+printf "  %s╭─────────────────────────────────────╮%s\n" "$CY" "$RS"
+printf "  %s│%s  ¿Para qué IA instalamos?            %s│%s\n" "$CY" "$RS" "$CY" "$RS"
+printf "  %s├─────────────────────────────────────┤%s\n" "$CY" "$RS"
+printf "  %s│%s  %s●%s %s1%s  Claude Code                   %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
+printf "  %s│%s  %s●%s %s2%s  Gemini CLI                    %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
+printf "  %s│%s  %s●%s %s3%s  OpenAI Codex                  %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
+printf "  %s│%s  %s●%s %s4%s  DeepSeek                      %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
+printf "  %s│%s  %s●%s %s5%s  Cursor                        %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
+printf "  %s│%s  %s●%s %s6%s  Windsurf                      %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
+printf "  %s│%s  %s●%s %s7%s  Genérico (system prompt)      %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
+printf "  %s├─────────────────────────────────────┤%s\n" "$CY" "$RS"
+printf "  %s│%s  %s◆%s %s8%s  Todas                         %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
+printf "  %s╰─────────────────────────────────────╯%s\n\n" "$CY" "$RS"
+
+printf "  %s›%s " "$CY" "$RS"
+read -r ai_choice
 echo ""
 
 # ─── Credenciales ─────────────────────────────────────────────────────────────
