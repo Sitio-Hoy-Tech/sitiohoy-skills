@@ -1,64 +1,36 @@
 # sitiohoy-skills
 
-## Instalación (un solo comando)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/Sitio-Hoy-Tech/sitiohoy-skills/main/bootstrap.sh | bash
-```
-
-Descarga todo, instala, y no deja el repo en tu computadora.
-
 Installer de contexto y skills de SitioHoy para cualquier AI CLI.
-
-Compatible con: Claude Code, Gemini CLI, OpenAI Codex, Cursor, Windsurf, y más.
+Compatible con: Claude Code, Gemini CLI, OpenAI Codex, DeepSeek, Cursor, Windsurf.
 
 ## Instalación
 
 ```bash
-git clone git@github.com:TU_ORG/sitiohoy-skills.git
-cd sitiohoy-skills
-bash install.sh
+curl -fsSL https://raw.githubusercontent.com/Sitio-Hoy-Tech/sitiohoy-skills/main/bootstrap.sh -o /tmp/sitiohoy.sh && bash /tmp/sitiohoy.sh
 ```
 
-El script:
-1. Copia las skills/docs a `~/.sitiohoy/`
-2. Pide las credenciales de Supabase (solo la primera vez)
-3. Genera `~/.sitiohoy/context.md` — un markdown unificado con todo el contexto
-4. Detecta qué IAs tenés instaladas y configura cada una automáticamente
-
-Para IAs no soportadas: usá `~/.sitiohoy/context.md` como system prompt.
+Descarga todo, mostrá el menú interactivo, instalá y no deja el repo en tu computadora.
 
 ## Actualizar skills
 
-Cuando modifiques las skills localmente:
+Cuando modifiques las skills localmente, sincronizá al repo:
 
 ```bash
+cd ~/Desktop/sitiohoy-skills
 bash update.sh
 git add skills/ && git commit -m "feat: actualizar skills" && git push
-```
-
-En otra máquina:
-
-```bash
-git pull && bash install.sh
-```
-
-## Agregar logo
-
-```bash
-cp /ruta/al/logo.png assets/logo.png
-git add assets/logo.png && git commit -m "assets: logo SitioHoy"
 ```
 
 ## Estructura
 
 ```
 sitiohoy-skills/
-├── install.sh                  ← installer universal
+├── bootstrap.sh                ← punto de entrada (curl)
+├── install.sh                  ← installer con menú interactivo
 ├── update.sh                   ← sincronizar skills locales → repo
 ├── credentials.env.example     ← template de credenciales
 ├── assets/
-│   └── logo.png
+│   └── logo-sitiohoy.png
 └── skills/
     ├── sitio-hoy/
     ├── sitio-hoy-briefing/
