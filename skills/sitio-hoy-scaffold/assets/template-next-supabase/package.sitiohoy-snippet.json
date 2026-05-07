@@ -1,0 +1,13 @@
+{
+  "scripts": {
+    "sitiohoy:validate": "node scripts/validate-sitiohoy.mjs",
+    "sitiohoy:qa": "node scripts/run-qa.mjs",
+    "sitiohoy:qa-report": "node scripts/generate-qa-report.mjs"
+  },
+  "dependencies": {
+    "@supabase/ssr": "latest",
+    "@supabase/supabase-js": "latest",
+    "zod": "latest"
+  },
+  "devDependencies": {}
+}

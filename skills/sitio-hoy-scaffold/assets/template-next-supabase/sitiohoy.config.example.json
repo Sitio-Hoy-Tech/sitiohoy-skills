@@ -1,0 +1,21 @@
+{
+  "project": "Nombre del negocio",
+  "plan": "esencial",
+  "tenantId": "",
+  "siteUrl": "",
+  "integrations": {
+    "mercadopago": false,
+    "fixedShipping": false,
+    "envia": false,
+    "resend": false,
+    "umami": false,
+    "whatsapp": true
+  },
+  "qualityGates": {
+    "build": true,
+    "staticValidation": true,
+    "playwright": true,
+    "lighthouse": true,
+    "accessibility": true
+  }
+}

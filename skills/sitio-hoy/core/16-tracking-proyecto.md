@@ -1,0 +1,190 @@
+---
+skill: tracking-proyecto
+descripcion: Registro interno de tokens, tiempo y costo por módulo — para análisis de producción de SitioHoy
+tipo: core — actualizar al finalizar CADA módulo, sin excepción
+---
+
+# Tracking de Proyecto
+
+> Registro interno de SitioHoy. No es parte del entregable al cliente.
+> El archivo `proyecto-tracking.json` va en la raíz del proyecto y en `.gitignore`.
+
+---
+
+## Crear al inicio del proyecto (Módulo 0)
+
+Crear `proyecto-tracking.json` con esta estructura base:
+
+```json
+{
+  "proyecto": "[Nombre del negocio]",
+  "plan": "[esencial | emprendimiento | empresa]",
+  "modelo": "[claude-sonnet-4-6 | gpt-4o | gemini-2-pro | ...]",
+  "precios_usd_por_1k_tokens": {
+    "input": 0.003,
+    "output": 0.015
+  },
+  "inicio_proyecto": "[ISO 8601]",
+  "fin_proyecto": null,
+  "duracion_total_minutos": null,
+  "tokens_input_total": 0,
+  "tokens_output_total": 0,
+  "costo_total_usd": 0,
+  "modulos": []
+}
+```
+
+### Precios de referencia por modelo (actualizar si cambian)
+
+| Modelo | Input /1K tokens | Output /1K tokens |
+|---|---|---|
+| claude-sonnet-4-6 | $0.003 | $0.015 |
+| claude-opus-4-6 | $0.015 | $0.075 |
+| gpt-4o | $0.005 | $0.015 |
+| gpt-4o-mini | $0.00015 | $0.0006 |
+| gemini-2.0-pro | $0.00125 | $0.005 |
+
+---
+
+## Actualizar al finalizar cada módulo
+
+Al completar el checklist ✅ de cada módulo, agregar un objeto al array `modulos`:
+
+```json
+{
+  "modulo": 0,
+  "nombre": "Setup e Identidad Visual",
+  "inicio": "[ISO 8601]",
+  "fin": "[ISO 8601]",
+  "duracion_minutos": 0,
+  "tokens_input_estimados": 0,
+  "tokens_output_estimados": 0,
+  "costo_estimado_usd": 0,
+  "archivos_creados": [],
+  "archivos_modificados": [],
+  "notas": ""
+}
+```
+
+### Cómo estimar tokens
+
+**Si usás Claude Code CLI:**
+Ejecutar `/cost` al finalizar el módulo — muestra tokens reales de la sesión.
+Como el tracking es por módulo, anotar la diferencia entre el `/cost` del módulo anterior y el actual.
+
+**Si usás otro entorno (Cursor, Windsurf, GPT):**
+Estimar según cantidad de archivos generados:
+- Archivo pequeño (< 50 líneas): ~2.000 tokens output
+- Archivo mediano (50-150 líneas): ~5.000 tokens output
+- Archivo grande (> 150 líneas): ~10.000 tokens output
+- Input: aproximadamente 2x el output (contexto + instrucciones)
+
+### Cálculo de costo
+
+```
+costo = (tokens_input / 1000 × precio_input) + (tokens_output / 1000 × precio_output)
+```
+
+---
+
+## Cerrar al finalizar el proyecto (último módulo)
+
+Completar los campos raíz:
+
+```json
+{
+  "fin_proyecto": "[ISO 8601]",
+  "duracion_total_minutos": "[suma de duracion_minutos de todos los módulos]",
+  "tokens_input_total": "[suma de tokens_input_estimados]",
+  "tokens_output_total": "[suma de tokens_output_estimados]",
+  "costo_total_usd": "[suma de costo_estimado_usd]"
+}
+```
+
+---
+
+## Ejemplo real completo
+
+```json
+{
+  "proyecto": "Ferretería Don Carlos",
+  "plan": "emprendimiento",
+  "modelo": "claude-sonnet-4-6",
+  "precios_usd_por_1k_tokens": {
+    "input": 0.003,
+    "output": 0.015
+  },
+  "inicio_proyecto": "2026-05-03T10:00:00-03:00",
+  "fin_proyecto": "2026-05-04T16:30:00-03:00",
+  "duracion_total_minutos": 390,
+  "tokens_input_total": 210000,
+  "tokens_output_total": 95000,
+  "costo_total_usd": 2.055,
+  "modulos": [
+    {
+      "modulo": 0,
+      "nombre": "Setup e Identidad Visual",
+      "inicio": "2026-05-03T10:00:00-03:00",
+      "fin": "2026-05-03T11:25:00-03:00",
+      "duracion_minutos": 85,
+      "tokens_input_estimados": 38000,
+      "tokens_output_estimados": 18000,
+      "costo_estimado_usd": 0.384,
+      "archivos_creados": [
+        "styles/tokens.css",
+        "types/database.ts",
+        ".env.local",
+        "lib/supabase/server.ts",
+        "lib/supabase/tenant.ts",
+        "lib/cache-tags.ts"
+      ],
+      "archivos_modificados": [
+        "package.json",
+        "next.config.ts",
+        "tsconfig.json"
+      ],
+      "notas": "Design system: verde oscuro #1B4332 + arena #F5F0E8. Fuente: Playfair Display + Inter."
+    },
+    {
+      "modulo": 1,
+      "nombre": "Layout Global",
+      "inicio": "2026-05-03T11:25:00-03:00",
+      "fin": "2026-05-03T12:40:00-03:00",
+      "duracion_minutos": 75,
+      "tokens_input_estimados": 42000,
+      "tokens_output_estimados": 19000,
+      "costo_estimado_usd": 0.411,
+      "archivos_creados": [
+        "app/layout.tsx",
+        "components/layout/Header.tsx",
+        "components/layout/Footer.tsx",
+        "components/ui/WhatsAppButton.tsx",
+        "styles/components/header.css",
+        "styles/components/footer.css"
+      ],
+      "archivos_modificados": [
+        "styles/tokens.css"
+      ],
+      "notas": "Header sticky con logo SVG. Menú hamburguesa en mobile. Botón WhatsApp flotante."
+    }
+  ]
+}
+```
+
+---
+
+## Agregar a `.gitignore`
+
+```
+# Tracking interno SitioHoy
+proyecto-tracking.json
+```
+
+---
+
+## Checklist de tracking ✅
+
+- [ ] `proyecto-tracking.json` creado en Módulo 0 con datos base
+- [ ] Cada módulo actualizado al finalizar su checklist
+- [ ] `proyecto-tracking.json` en `.gitignore`
+- [ ] Totales completados al cerrar el proyecto
