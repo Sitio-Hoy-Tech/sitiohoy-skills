@@ -52,23 +52,88 @@ RS=$'\033[0m'
 
 printf "  %s📁 Destino:%s %s%s%s\n\n" "$GY" "$RS" "$BD" "$TARGET_DIR" "$RS"
 
-printf "  %s╭─────────────────────────────────────╮%s\n" "$CY" "$RS"
-printf "  %s│%s  ¿Para qué IA instalamos?            %s│%s\n" "$CY" "$RS" "$CY" "$RS"
-printf "  %s├─────────────────────────────────────┤%s\n" "$CY" "$RS"
-printf "  %s│%s  %s●%s %s1%s  Claude Code                   %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
-printf "  %s│%s  %s●%s %s2%s  Gemini CLI                    %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
-printf "  %s│%s  %s●%s %s3%s  OpenAI Codex                  %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
-printf "  %s│%s  %s●%s %s4%s  DeepSeek                      %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
-printf "  %s│%s  %s●%s %s5%s  Cursor                        %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
-printf "  %s│%s  %s●%s %s6%s  Windsurf                      %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
-printf "  %s│%s  %s●%s %s7%s  Genérico (system prompt)      %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
-printf "  %s├─────────────────────────────────────┤%s\n" "$CY" "$RS"
-printf "  %s│%s  %s◆%s %s8%s  Todas                         %s│%s\n" "$CY" "$RS" "$CY" "$RS" "$BD" "$RS" "$CY" "$RS"
-printf "  %s╰─────────────────────────────────────╯%s\n\n" "$CY" "$RS"
+OPTIONS=(
+  "Claude Code"
+  "Gemini CLI"
+  "OpenAI Codex"
+  "DeepSeek"
+  "Cursor"
+  "Windsurf"
+  "Genérico (system prompt)"
+  "Todas"
+)
+TOTAL=${#OPTIONS[@]}
+selected=0
 
-printf "  %s›%s " "$CY" "$RS"
-read -r ai_choice
-echo ""
+# Colores para el menú
+HL=$'\033[48;2;34;163;91m\033[38;2;255;255;255m'  # highlight: fondo verde, texto blanco
+NM=$'\033[38;2;180;180;180m'                        # normal: gris
+CY=$'\033[38;2;34;163;91m'
+GY=$'\033[38;2;120;120;120m'
+BD=$'\033[1m'
+RS=$'\033[0m'
+
+draw_menu() {
+  printf "  %s╭─────────────────────────────────────╮%s\n" "$CY" "$RS"
+  printf "  %s│%s  ¿Para qué IA instalamos?            %s│%s\n" "$CY" "$RS" "$CY" "$RS"
+  printf "  %s├─────────────────────────────────────┤%s\n" "$CY" "$RS"
+  for i in "${!OPTIONS[@]}"; do
+    if [ "$i" -eq "$selected" ]; then
+      printf "  %s│%s  %s❯ %-34s%s%s│%s\n" "$CY" "$RS" "$HL" "${OPTIONS[$i]}" "$RS" "$CY" "$RS"
+    else
+      if [ "$i" -eq 7 ]; then
+        printf "  %s│%s  %s◆ %-34s%s%s│%s\n" "$CY" "$RS" "$NM" "${OPTIONS[$i]}" "$RS" "$CY" "$RS"
+      else
+        printf "  %s│%s  %s● %-34s%s%s│%s\n" "$CY" "$RS" "$NM" "${OPTIONS[$i]}" "$RS" "$CY" "$RS"
+      fi
+    fi
+  done
+  printf "  %s╰─────────────────────────────────────╯%s\n" "$CY" "$RS"
+  printf "  %s↑↓ mover · Enter confirmar%s\n\n" "$GY" "$RS"
+}
+
+# Captura teclas de flecha
+read_key() {
+  local key
+  IFS= read -rsn1 key
+  if [[ "$key" == $'\x1b' ]]; then
+    read -rsn2 key
+    case "$key" in
+      '[A') echo "UP"   ;;
+      '[B') echo "DOWN" ;;
+    esac
+  elif [[ "$key" == "" ]]; then
+    echo "ENTER"
+  fi
+}
+
+# Ocultar cursor
+printf '\033[?25l'
+trap 'printf "\033[?25h"' EXIT
+
+draw_menu
+while true; do
+  k=$(read_key)
+  case "$k" in
+    UP)
+      [ "$selected" -gt 0 ] && ((selected--))
+      printf '\033[%dA' $((TOTAL + 4))
+      draw_menu
+      ;;
+    DOWN)
+      [ "$selected" -lt $((TOTAL - 1)) ] && ((selected++))
+      printf '\033[%dA' $((TOTAL + 4))
+      draw_menu
+      ;;
+    ENTER)
+      break
+      ;;
+  esac
+done
+
+printf '\033[?25h'
+ai_choice=$((selected + 1))
+printf "  %s✓%s %s%s%s\n\n" "$CY" "$RS" "$BD" "${OPTIONS[$selected]}" "$RS"
 
 # ─── Credenciales ─────────────────────────────────────────────────────────────
 echo -e "${BLUE}── Credenciales de Supabase${NC}"
