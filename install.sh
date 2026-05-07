@@ -111,18 +111,20 @@ read_key() {
 printf '\033[?25l'
 trap 'printf "\033[?25h"' EXIT
 
+# Guardar posición antes de dibujar
+printf '\033[s'
 draw_menu
 while true; do
   k=$(read_key)
   case "$k" in
     UP)
       [ "$selected" -gt 0 ] && ((selected--))
-      printf '\033[%dA' $((TOTAL + 4))
+      printf '\033[u'
       draw_menu
       ;;
     DOWN)
       [ "$selected" -lt $((TOTAL - 1)) ] && ((selected++))
-      printf '\033[%dA' $((TOTAL + 4))
+      printf '\033[u'
       draw_menu
       ;;
     ENTER)
