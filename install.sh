@@ -266,21 +266,30 @@ CLAUDEMD
 }
 
 install_gemini() {
+  local skills_dir="$TARGET_DIR/.gemini/skills"
   local gemini_md="$TARGET_DIR/GEMINI.md"
+  mkdir -p "$skills_dir"
+  rsync -a "$REPO_DIR/skills/" "$skills_dir/"
   generate_context_block > "$gemini_md"
-  success "Gemini CLI → GEMINI.md creado en $TARGET_DIR"
+  success "Gemini CLI → GEMINI.md + .gemini/skills/ creados en $TARGET_DIR"
 }
 
 install_codex() {
+  local skills_dir="$TARGET_DIR/.agents/skills"
   local agents_md="$TARGET_DIR/AGENTS.md"
+  mkdir -p "$skills_dir"
+  rsync -a "$REPO_DIR/skills/" "$skills_dir/"
   generate_context_block > "$agents_md"
-  success "OpenAI Codex → AGENTS.md creado en $TARGET_DIR"
+  success "OpenAI Codex → AGENTS.md + .agents/skills/ creados en $TARGET_DIR"
 }
 
 install_deepseek() {
-  local ds_md="$TARGET_DIR/DEEPSEEK.md"
+  local skills_dir="$TARGET_DIR/.agents/skills"
+  local ds_md="$TARGET_DIR/AGENTS.md"
+  mkdir -p "$skills_dir"
+  rsync -a "$REPO_DIR/skills/" "$skills_dir/"
   generate_context_block > "$ds_md"
-  success "DeepSeek → DEEPSEEK.md creado en $TARGET_DIR"
+  success "DeepSeek → AGENTS.md + .agents/skills/ creados en $TARGET_DIR"
 }
 
 install_cursor() {
