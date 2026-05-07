@@ -1,5 +1,13 @@
 # sitiohoy-skills
 
+## Instalación (un solo comando)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sitio-Hoy-Tech/sitiohoy-skills/main/bootstrap.sh | bash
+```
+
+Descarga todo, instala, y no deja el repo en tu computadora.
+
 Installer de contexto y skills de SitioHoy para cualquier AI CLI.
 
 Compatible con: Claude Code, Gemini CLI, OpenAI Codex, Cursor, Windsurf, y más.
