@@ -189,6 +189,42 @@ integraciones/
 
 ---
 
+## Paralelización
+
+### Qué es estrictamente secuencial
+
+El flujo principal es secuencial por dependencia de datos:
+Briefing → Scaffold → Database → Módulos → QA → Launch.
+No saltear ni paralelizar estos pasos mayores.
+
+### Qué puede ejecutarse en paralelo dentro de cada paso
+
+**Durante el desarrollo de módulos** — los módulos de UI sin dependencia de estado
+compartido pueden desarrollarse en simultáneo:
+
+| Se puede parallelizar | Condición |
+|---|---|
+| Páginas estáticas independientes (About, Contacto, FAQ) | No comparten estado entre sí |
+| Componentes de UI del mismo módulo (Hero + FeaturedGrid + Footer) | Cada componente es un archivo separado |
+| Generación de datos demo + configuración de tokens de diseño | Son archivos independientes |
+| Auditoría Lighthouse de múltiples páginas | Cada página es un check independiente |
+
+**Lo que NO puede paralelizarse:**
+- Módulo de catálogo antes de tener el schema de productos en Supabase
+- Módulo de checkout antes de tener el carrito
+- Deploy antes de QA aprobado
+- Cualquier módulo antes de tener `styles/tokens.css` (regla de diseño)
+
+### Hint para la IA
+
+Cuando detectes tareas del mismo módulo que no comparten estado,
+podés ejecutarlas en paralelo usando los mecanismos disponibles
+en tu plataforma (subagentes, tool calls simultáneas, etc.).
+Indicar explícitamente en el plan qué se lanza en paralelo y esperar
+a que todas terminen antes de marcar el módulo como completo.
+
+---
+
 ## Compatibilidad con IAs
 
 Este skill funciona en cualquier IA del mercado.

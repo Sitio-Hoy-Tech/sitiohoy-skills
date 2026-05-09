@@ -2,11 +2,120 @@
 # SitioHoy AI Context Installer
 # Crea los archivos de contexto en la carpeta donde estás parado,
 # para la IA que elijas.
+#
+# Uso:
+#   ./install.sh                    # versión más reciente (main)
+#   ./install.sh --version v1.2.0   # versión específica
+#   ./install.sh --rollback         # menú para elegir versión anterior
+#   ./install.sh --list-versions    # listar versiones disponibles
 set -e
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_DIR="$(pwd)"
 CREDS_FILE="$HOME/.sitiohoy/credentials.env"
+GITHUB_REPO="Sitio-Hoy-Tech/sitiohoy-skills"
+INSTALL_VERSION=""   # vacío = main
+TEMP_CLONE=""        # se llena si se clona una versión específica
+
+# ── Parsear flags de versión ──────────────────────────────────────────────────
+for arg in "$@"; do
+  case "$arg" in
+    --version=*) INSTALL_VERSION="${arg#*=}" ;;
+    --version)   shift; INSTALL_VERSION="$1" ;;
+    --rollback)  INSTALL_VERSION="__pick__" ;;
+    --list-versions)
+      echo ""
+      echo "  Versiones disponibles en GitHub:"
+      curl -fsSL "https://api.github.com/repos/${GITHUB_REPO}/tags" 2>/dev/null \
+        | grep '"name"' | sed 's/.*"name": "\(.*\)".*/    \1/' \
+        || echo "  (no se pudo conectar a GitHub)"
+      echo ""
+      exit 0
+      ;;
+  esac
+  shift 2>/dev/null || true
+done
+
+# ── Resolver versión ──────────────────────────────────────────────────────────
+resolve_version() {
+  # Obtener tags de GitHub
+  local tags_json
+  tags_json=$(curl -fsSL "https://api.github.com/repos/${GITHUB_REPO}/tags" 2>/dev/null || echo "[]")
+  local tags=()
+  while IFS= read -r line; do
+    [[ "$line" =~ \"name\":\ *\"([^\"]+)\" ]] && tags+=("${BASH_REMATCH[1]}")
+  done <<< "$tags_json"
+
+  if [ ${#tags[@]} -eq 0 ]; then
+    warn "No se encontraron versiones publicadas. Usando main."
+    INSTALL_VERSION=""
+    return
+  fi
+
+  # Menú de selección de versión
+  local ver_selected=0
+  local ver_options=("${tags[@]}" "main (última)")
+  local VER_TOTAL=${#ver_options[@]}
+
+  draw_version_menu() {
+    printf "  %s╭─────────────────────────────────────╮%s\n" "$CY" "$RS"
+    printf "  %s│%s  ¿Qué versión instalamos?             %s│%s\n" "$CY" "$RS" "$CY" "$RS"
+    printf "  %s├─────────────────────────────────────┤%s\n" "$CY" "$RS"
+    for i in "${!ver_options[@]}"; do
+      if [ "$i" -eq "$ver_selected" ]; then
+        printf "  %s│%s  %s❯ %-34s%s%s│%s\n" "$CY" "$RS" "$HL" "${ver_options[$i]}" "$RS" "$CY" "$RS"
+      else
+        printf "  %s│%s  %s● %-34s%s%s│%s\n" "$CY" "$RS" "$NM" "${ver_options[$i]}" "$RS" "$CY" "$RS"
+      fi
+    done
+    printf "  %s╰─────────────────────────────────────╯%s\n" "$CY" "$RS"
+    printf "  %s↑↓ mover · Enter confirmar%s\n\n" "$GY" "$RS"
+  }
+
+  local VER_MENU_LINES=$((VER_TOTAL + 6))
+
+  printf '\033[?25l'
+  draw_version_menu
+  while true; do
+    k=$(read_key)
+    case "$k" in
+      UP)    [ "$ver_selected" -gt 0 ] && ((ver_selected--)); printf '\033[%dA\033[J' "$VER_MENU_LINES"; draw_version_menu ;;
+      DOWN)  [ "$ver_selected" -lt $((VER_TOTAL - 1)) ] && ((ver_selected++)); printf '\033[%dA\033[J' "$VER_MENU_LINES"; draw_version_menu ;;
+      ENTER) break ;;
+    esac
+  done
+  printf '\033[?25h'
+
+  local chosen="${ver_options[$ver_selected]}"
+  printf "  %s✓%s Versión: %s%s%s\n\n" "$CY" "$RS" "$BD" "$chosen" "$RS"
+
+  if [[ "$chosen" == "main (última)" ]]; then
+    INSTALL_VERSION=""
+  else
+    INSTALL_VERSION="$chosen"
+  fi
+}
+
+# ── Clonar versión específica ─────────────────────────────────────────────────
+clone_version() {
+  local version="$1"
+  TEMP_CLONE="$(mktemp -d)"
+  info "Descargando versión ${version}..."
+  if ! git clone --quiet --depth 1 --branch "$version" \
+       "https://github.com/${GITHUB_REPO}.git" "$TEMP_CLONE" 2>/dev/null; then
+    warn "No se pudo clonar la versión ${version}. Usando instalación local."
+    rm -rf "$TEMP_CLONE"
+    TEMP_CLONE=""
+  else
+    REPO_DIR="$TEMP_CLONE"
+    success "Versión ${version} lista."
+  fi
+}
+
+# cleanup al salir
+cleanup_temp() {
+  [ -n "$TEMP_CLONE" ] && rm -rf "$TEMP_CLONE"
+}
 
 GR='\033[38;2;34;163;91m'    # SitioHoy green (text)
 BG='\033[48;2;34;163;91m'    # SitioHoy green (background)
@@ -115,9 +224,20 @@ redraw_menu() {
   draw_menu
 }
 
+# ─── Versión a instalar ────────────────────────────────────────────────────────
+# Si se pidió rollback, mostrar menú de versiones ahora que read_key está listo
+if [ "$INSTALL_VERSION" = "__pick__" ]; then
+  resolve_version
+fi
+# Si se eligió una versión específica, clonarla antes de copiar archivos
+if [ -n "$INSTALL_VERSION" ]; then
+  clone_version "$INSTALL_VERSION"
+fi
+
+# ─── Menú de IA ───────────────────────────────────────────────────────────────
 # Ocultar cursor
 printf '\033[?25l'
-trap 'printf "\033[?25h"' EXIT
+trap 'printf "\033[?25h"; cleanup_temp' EXIT
 
 draw_menu
 while true; do
@@ -311,11 +431,17 @@ install_generic() {
   info "Pegá el contenido de context.md como system prompt en tu IA"
 }
 
-# Logo (siempre, si está disponible)
+# Logo — descarga desde el repo o copia local como fallback
 copy_logo() {
-  if [ -f "$REPO_DIR/assets/logo.png" ]; then
-    cp "$REPO_DIR/assets/logo.png" "$TARGET_DIR/logo-sitiohoy.png"
-    success "Logo → logo-sitiohoy.png copiado"
+  local logo_url="https://raw.githubusercontent.com/Sitio-Hoy-Tech/sitiohoy-skills/main/assets/logo-sitiohoy.png"
+  local dest="$TARGET_DIR/logo-sitiohoy.png"
+  if curl -fsSL "$logo_url" -o "$dest" 2>/dev/null; then
+    success "Logo → logo-sitiohoy.png descargado"
+  elif [ -f "$REPO_DIR/assets/logo-sitiohoy.png" ]; then
+    cp "$REPO_DIR/assets/logo-sitiohoy.png" "$dest"
+    success "Logo → logo-sitiohoy.png copiado (local)"
+  else
+    warn "No se pudo obtener el logo"
   fi
 }
 

@@ -62,6 +62,65 @@ const categories = (pickBriefValue('Categorias') || 'Destacados, Novedades')
   .filter(Boolean)
   .slice(0, 4)
 
+// ── Image resolution ──────────────────────────────────────────────────────────
+// Busca imágenes relevantes al rubro sin llamadas a LLM.
+// Prioridad:
+//   1. UNSPLASH_ACCESS_KEY definida → Unsplash Search API (1 request/categoría, máx 4)
+//   2. Sin key → source.unsplash.com por keyword (gratis, sin auth)
+//   3. Flag --no-images → placehold.co (comportamiento original)
+
+const noImages = args.get('no-images')
+const unsplashKey = process.env.UNSPLASH_ACCESS_KEY
+
+// Keyword de negocio: se toma de config.keywords, config.description, o el nombre del proyecto
+const businessKeyword = String(config.keywords ?? config.description ?? project)
+  .replace(/[^\w\sáéíóúüñÁÉÍÓÚÜÑ]/g, ' ')
+  .trim()
+  .split(/\s+/)
+  .slice(0, 3)
+  .join(' ')
+
+async function resolveImagesForCategory(category, count) {
+  if (noImages) {
+    return Array.from({ length: count }, (_, i) =>
+      `https://placehold.co/900x1100/png?text=${encodeURIComponent(category)}+${i + 1}`,
+    )
+  }
+
+  const keyword = `${category} ${businessKeyword}`.trim()
+
+  if (unsplashKey) {
+    try {
+      const res = await fetch(
+        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(keyword)}&per_page=${count}&orientation=portrait`,
+        { headers: { Authorization: `Client-ID ${unsplashKey}` } },
+      )
+      if (res.ok) {
+        const data = await res.json()
+        const photos = data.results ?? []
+        if (photos.length > 0) {
+          // Si vienen menos fotos de las necesarias, rota desde el principio
+          return Array.from({ length: count }, (_, i) => photos[i % photos.length].urls.regular)
+        }
+      }
+    } catch {
+      // cae a source.unsplash.com
+    }
+  }
+
+  // Sin key: source.unsplash.com — gratis, sin auth, keyword-based.
+  // sig=i garantiza imágenes distintas para productos de la misma categoría.
+  return Array.from({ length: count }, (_, i) =>
+    `https://source.unsplash.com/900x1100/?${encodeURIComponent(keyword)}&sig=${i}`,
+  )
+}
+
+// Resolver imágenes por categoría (máx 4 llamadas a Unsplash si hay key)
+const categoryImages = {}
+for (const category of categories) {
+  categoryImages[category] = await resolveImagesForCategory(category, 3)
+}
+
 const integrations = config.integrations ?? {}
 const envRows = [
   ['NEXT_PUBLIC_SUPABASE_URL', 'https://PROJECT_REF.supabase.co'],
@@ -83,7 +142,7 @@ const demoProducts = categories.flatMap((category, categoryIndex) =>
     price: 12000 + categoryIndex * 2500 + index * 900,
     compare_at_price: index === 0 ? 15900 + categoryIndex * 2500 : null,
     featured: categoryIndex === 0,
-    image_url: `https://placehold.co/900x1100/png?text=${encodeURIComponent(category)}+${index + 1}`,
+    image_url: categoryImages[category][index],
   })),
 )
 

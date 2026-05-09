@@ -114,6 +114,30 @@ Al terminar el scaffold, generar `README.md` en la raíz con esta estructura mí
 [SitioHoy](https://sitiohoy.com.ar) — Plan {plan} · {año}
 ```
 
+## Paralelización
+
+Estas tareas son independientes y pueden ejecutarse simultáneamente:
+
+**Grupo A — instalación de dependencias** (una vez creado el proyecto base):
+- Dependencias base (`@supabase/ssr`, `lucide-react`, `zod`, etc.)
+- Dependencias de plan (`mercadopago`, `react-hook-form`, `zustand`) — solo si aplica
+- Dependencias de Resend — solo si aplica
+
+Las instalaciones pueden resolverse en paralelo si el package manager lo soporta.
+Si no, ejecutarlas en el orden del workflow para evitar conflictos de lockfile.
+
+**Grupo B — generación de archivos de configuración** (independientes entre sí):
+- `sitiohoy.config.json`
+- `.env.example`
+- `styles/tokens.css`
+- `lib/cache-tags.ts`
+- `lib/config/env.ts`
+- `app/layout.tsx`, `app/error.tsx`, `app/not-found.tsx`
+- `README.md`
+
+El Grupo B puede generarse en paralelo mientras el Grupo A instala dependencias,
+ya que los archivos no requieren que las dependencias estén instaladas para crearse.
+
 ## Handoff
 
 Despues del scaffold:
