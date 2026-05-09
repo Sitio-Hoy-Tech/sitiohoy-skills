@@ -97,7 +97,7 @@ if [ "$CHOSEN_REF" = "main" ]; then
   git clone --quiet --depth 1 \
     "https://github.com/${REPO}.git" "$TMP_DIR"
 else
-  git clone --quiet --depth 1 --branch "$CHOSEN_REF" \
+  git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$CHOSEN_REF" \
     "https://github.com/${REPO}.git" "$TMP_DIR"
 fi
 
