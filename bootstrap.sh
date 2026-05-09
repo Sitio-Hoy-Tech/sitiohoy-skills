@@ -94,18 +94,14 @@ fi
 printf "  %s→%s Descargando %s%s%s...\n\n" "$CY" "$RS" "$BD" "$CHOSEN_REF" "$RS"
 
 if [ "$CHOSEN_REF" = "main" ]; then
-  if ! git clone --quiet --depth 1 \
-    "https://github.com/${REPO}.git" "$TMP_DIR" > /dev/null 2>&1; then
-    printf "  %s✗%s No se pudo descargar. Verificá tu conexión.\n\n" "$CY" "$RS"
-    exit 1
-  fi
+  ZIP_URL="https://github.com/${REPO}/archive/refs/heads/main.tar.gz"
 else
-  if ! git -c advice.detachedHead=false clone --quiet --depth 1 \
-    --branch "$CHOSEN_REF" \
-    "https://github.com/${REPO}.git" "$TMP_DIR" > /dev/null 2>&1; then
-    printf "  %s✗%s No se pudo descargar la versión %s.\n\n" "$CY" "$RS" "$CHOSEN_REF"
-    exit 1
-  fi
+  ZIP_URL="https://github.com/${REPO}/archive/refs/tags/${CHOSEN_REF}.tar.gz"
+fi
+
+if ! curl -fsSL "$ZIP_URL" | tar -xz -C "$TMP_DIR" --strip-components=1 2>/dev/null; then
+  printf "  %s✗%s No se pudo descargar. Verificá tu conexión.\n\n" "$CY" "$RS"
+  exit 1
 fi
 
 bash "$TMP_DIR/install.sh"
