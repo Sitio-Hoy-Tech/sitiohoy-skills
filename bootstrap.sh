@@ -98,7 +98,7 @@ if [ "$CHOSEN_REF" = "main" ]; then
     "https://github.com/${REPO}.git" "$TMP_DIR"
 else
   git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$CHOSEN_REF" \
-    "https://github.com/${REPO}.git" "$TMP_DIR"
+    "https://github.com/${REPO}.git" "$TMP_DIR" 2>/dev/null
 fi
 
 bash "$TMP_DIR/install.sh"
