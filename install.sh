@@ -168,6 +168,7 @@ OPTIONS=(
   "DeepSeek"
   "Cursor"
   "Windsurf"
+  "OpenCode"
   "Genérico (system prompt)"
   "Todas"
 )
@@ -190,7 +191,7 @@ draw_menu() {
     if [ "$i" -eq "$selected" ]; then
       printf "  %s│%s  %s❯ %-34s%s%s│%s\n" "$CY" "$RS" "$HL" "${OPTIONS[$i]}" "$RS" "$CY" "$RS"
     else
-      if [ "$i" -eq 7 ]; then
+      if [ "$i" -eq 8 ]; then
         printf "  %s│%s  %s◆ %-34s%s%s│%s\n" "$CY" "$RS" "$NM" "${OPTIONS[$i]}" "$RS" "$CY" "$RS"
       else
         printf "  %s│%s  %s● %-34s%s%s│%s\n" "$CY" "$RS" "$NM" "${OPTIONS[$i]}" "$RS" "$CY" "$RS"
@@ -201,17 +202,21 @@ draw_menu() {
   printf "  %s↑↓ mover · Enter confirmar%s\n\n" "$GY" "$RS"
 }
 
-# Captura teclas de flecha
+# Captura teclas de flecha (compatible con WSL, Git Bash, Warp en Windows/Linux)
 read_key() {
-  local key
-  IFS= read -rsn1 key
-  if [[ "$key" == $'\x1b' ]]; then
-    read -rsn2 key
-    case "$key" in
-      '[A') echo "UP"   ;;
-      '[B') echo "DOWN" ;;
-    esac
-  elif [[ "$key" == "" ]]; then
+  local key ch1 ch2 ch3
+  IFS= read -rsn1 ch1
+  if [[ "$ch1" == $'\x1b' ]]; then
+    # Leer siguiente byte con timeout para distinguir ESC solo de secuencia
+    IFS= read -rsn1 -t 0.1 ch2 || { echo "ESC"; return; }
+    if [[ "$ch2" == '[' ]]; then
+      IFS= read -rsn1 -t 0.1 ch3 || { echo "ESC"; return; }
+      case "$ch3" in
+        'A') echo "UP"   ;;
+        'B') echo "DOWN" ;;
+      esac
+    fi
+  elif [[ "$ch1" == "" ]]; then
     echo "ENTER"
   fi
 }
@@ -424,6 +429,12 @@ install_windsurf() {
   success "Windsurf → .windsurfrules creado en $TARGET_DIR"
 }
 
+install_opencode() {
+  local opencode_md="$TARGET_DIR/OPENCODE.md"
+  generate_context_block > "$opencode_md"
+  success "OpenCode → OPENCODE.md creado en $TARGET_DIR"
+}
+
 install_generic() {
   local ctx="$TARGET_DIR/context.md"
   generate_context_block > "$ctx"
@@ -449,23 +460,25 @@ echo -e "${BLUE}── Instalando...${NC}"
 echo ""
 
 case "$ai_choice" in
-  1) install_claude   ;;
-  2) install_gemini   ;;
-  3) install_codex    ;;
-  4) install_deepseek ;;
-  5) install_cursor   ;;
-  6) install_windsurf ;;
-  7) install_generic  ;;
-  8)
+  1) install_claude    ;;
+  2) install_gemini    ;;
+  3) install_codex     ;;
+  4) install_deepseek  ;;
+  5) install_cursor    ;;
+  6) install_windsurf  ;;
+  7) install_opencode  ;;
+  8) install_generic   ;;
+  9)
     install_claude
     install_gemini
     install_codex
     install_deepseek
     install_cursor
     install_windsurf
+    install_opencode
     ;;
   *)
-    echo "Opción inválida. Usá 1-8."
+    echo "Opción inválida. Usá 1-9."
     exit 1
     ;;
 esac
