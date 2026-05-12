@@ -208,9 +208,9 @@ read_key() {
   IFS= read -rsn1 ch1
   if [[ "$ch1" == $'\x1b' ]]; then
     # Leer siguiente byte con timeout para distinguir ESC solo de secuencia
-    IFS= read -rsn1 -t 0.1 ch2 || { echo "ESC"; return; }
+    IFS= read -rsn1 -t 1 ch2 || { echo "ESC"; return; }
     if [[ "$ch2" == '[' ]]; then
-      IFS= read -rsn1 -t 0.1 ch3 || { echo "ESC"; return; }
+      IFS= read -rsn1 -t 1 ch3 || { echo "ESC"; return; }
       case "$ch3" in
         'A') echo "UP"   ;;
         'B') echo "DOWN" ;;
