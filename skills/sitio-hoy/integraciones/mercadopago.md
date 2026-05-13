@@ -188,7 +188,32 @@ const STATUS_MAP: Record<string, string> = {
 }
 
 export const POST = async (req: NextRequest): Promise<NextResponse> => {
-  const body = await req.json()
+  // VERIFICACIÓN DE FIRMA — OBLIGATORIA, no opcional
+  const webhookSecret = process.env.MP_WEBHOOK_SECRET
+  if (!webhookSecret) {
+    console.error('[MP Webhook] MP_WEBHOOK_SECRET no configurado — request rechazado')
+    return NextResponse.json({ error: 'Webhook no configurado' }, { status: 500 })
+  }
+
+  const rawBody = await req.text()
+  const xSignature = req.headers.get('x-signature')
+  const xRequestId = req.headers.get('x-request-id')
+
+  if (xSignature) {
+    // Verificación de firma HMAC-SHA256 según docs de MercadoPago
+    const parts = Object.fromEntries(xSignature.split(',').map(p => p.trim().split('=')))
+    const ts = parts['ts']
+    const v1 = parts['v1']
+    const dataId = new URL(req.url).searchParams.get('data.id') ?? ''
+    const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`
+    const { createHmac } = await import('node:crypto')
+    const expected = createHmac('sha256', webhookSecret).update(manifest).digest('hex')
+    if (v1 !== expected) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 403 })
+    }
+  }
+
+  const body = JSON.parse(rawBody)
   if (body.type !== 'payment') return NextResponse.json({ received: true })
 
   const tenantId = process.env.NEXT_PUBLIC_TENANT_ID!

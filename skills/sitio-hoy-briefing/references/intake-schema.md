@@ -79,7 +79,7 @@ La IA debe convertir respuestas del cliente a este JSON y guardarlo en
 
 - `plan`: `esencial`, `emprendimiento`, `empresa`
 - `domain.status`: `owned`, `pending_purchase`, `temporary`
-- `editor`: `claude-code`, `cursor`, `windsurf`, `copilot`, `other`
+- `editor`: `claude-code`, `cursor`, `windsurf`, `copilot`, `opencode`, `gemini`, `codex`, `other`
 - `primaryDevice`: `mobile`, `desktop`, `mixed`
 - `photoQuality`: `professional`, `phone`, `supplier`, `none`
 - `catalog.type`: `physical`, `digital`, `service`, `mixed`

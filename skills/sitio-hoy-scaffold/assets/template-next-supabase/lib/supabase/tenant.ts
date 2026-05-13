@@ -22,5 +22,5 @@ export const getTenantConfig = unstable_cache(
     return data
   },
   ['tenant-config'],
-  { tags: [TAGS.TENANT], revalidate: 3600 },
+  { tags: [TAGS.TENANT] },
 )

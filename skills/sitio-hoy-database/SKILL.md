@@ -20,15 +20,22 @@ Emprendimiento o Empresa sin rehacer migraciones base.
 ## Workflow
 
 1. Leer `sitiohoy.config.json` si existe.
-2. Generar migracion:
+2. Generar migracion y seed admin:
    ```bash
    node scripts/generate-supabase-migration.mjs --plan esencial
    ```
-3. Crear o revisar:
-   - `supabase/migrations/001_initial_schema.sql`
+   El script genera:
+   - `supabase/migrations/001_initial_schema.sql` — schema completo
+   - `supabase/migrations/002_seed_admin.sql` — tenant inicial + usuario admin
+   - `credentials.local.json` — email y password del admin (gitignoreado automáticamente)
+3. Crear el usuario admin en Supabase Auth **antes** de ejecutar el seed:
+   - Con Supabase MCP: `supabase.auth.admin.createUser({ email, password, email_confirm: true })`
+   - O manualmente en el Dashboard → Authentication → Users → Add user
+   - Las credenciales están en `credentials.local.json`
+4. Aplicar las migraciones con Supabase MCP o en Dashboard (en orden: 001 → 002).
+5. Crear o revisar:
    - `types/database.ts` si el proyecto ya usa tipos manuales
-4. Aplicar con Supabase MCP o entregar SQL para ejecutar en Dashboard.
-5. Validar que:
+6. Validar que:
    - todas las tablas tengan `tenant_id` cuando corresponde;
    - RLS este habilitado;
    - service role solo se use en server;
@@ -73,7 +80,13 @@ fallback y upgrades.
 - La pagina de seguimiento debe usar Server Action o RPC filtrada por
   `tenant_id` + `tracking_token`, no una policy anon basada en JWT inventado.
 
+## Seguridad de credenciales
+
+- `credentials.local.json` contiene email y password del admin, generado con contraseña aleatoria segura.
+- El script agrega automáticamente `credentials.local.json` a `.gitignore`.
+- Nunca commitear ese archivo. Compartir credenciales por canal seguro (Bitwarden, 1Password, etc).
+
 ## Recursos
 
-- `scripts/generate-supabase-migration.mjs`: genera la migracion inicial.
+- `scripts/generate-supabase-migration.mjs`: genera la migracion inicial + seed admin.
 - `references/schema-contract.md`: resumen de tablas y decisiones.

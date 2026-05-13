@@ -119,7 +119,7 @@ Usar `sitio-hoy-launch-automation` solo cuando QA esté aprobado o documentado.
 - Una pregunta → nunca volver a pedir lo ya dado
 - Solo hablar ante: error crítico / dato faltante / fin de módulo / bloqueo externo
 - Formato de fin de módulo: `Módulo N ✅ · Listo para N+1`
-- Al finalizar cada módulo: actualizar `proyecto-tracking.json` con duración, tokens estimados y archivos
+- Al finalizar cada módulo: ejecutar `npm run sitiohoy:tracking -- --modulo N --nombre "Nombre"` para actualizar `proyecto-tracking.json` automáticamente
 - Al finalizar cada módulo: ejecutar `npm run sitiohoy:validate` o justificar por qué no aplica
 - Al finalizar cada módulo: actualizar `README.md` si el módulo agrega una integración, patrón clave, variable de entorno o página nueva que no esté documentada. No reescribir secciones que no cambiaron.
 
@@ -225,19 +225,42 @@ a que todas terminen antes de marcar el módulo como completo.
 
 ---
 
-## Compatibilidad con IAs
+## Compatibilidad con IAs — Guía de rutas por entorno
 
-Este skill funciona en cualquier IA del mercado.
+Este skill genera **exactamente el mismo código** en cualquier IA.
+Lo que cambia es cómo se ejecutan ciertos pasos de setup. Seguir la ruta correspondiente:
 
-**Si tenés Claude Code:**
-- Podés usar AIDesigner MCP para el design system (`npx -y @aidesigner/agent-skills init`)
-- Podés usar Supabase MCP para aplicar el schema automáticamente
+### Operaciones críticas — rutas por entorno
 
-**Si usás otra IA (GPT-4, Gemini, etc.):**
-- El design system se genera manualmente siguiendo `core/04-design-system.md`
-- Los scripts SQL de Supabase se generan en `supabase/migrations/` para ejecutar manualmente
-- El launch genera comandos GitHub/Vercel/Supabase portables en `.sitiohoy/launch/`
-- Toda la lógica de código es idéntica — solo cambia la forma de setup inicial
+| Operación | Claude Code | Cursor / Windsurf | OpenCode | GPT-4 / Gemini / Codex |
+|---|---|---|---|---|
+| Aplicar migraciones SQL | Supabase MCP (automático) o `supabase db push` | `supabase db push` en terminal | `supabase db push` en terminal | SQL Editor en Dashboard de Supabase |
+| Crear repo GitHub | `gh repo create` vía shell | `gh repo create` en terminal | `gh repo create` en terminal | UI de GitHub + `git remote add origin` |
+| Deploy a Vercel | `vercel` CLI o Vercel MCP | `vercel` CLI en terminal | `vercel` CLI en terminal | `vercel` CLI en terminal o UI de Vercel |
+| Leer `/cost` de tokens | Comando `/cost` en Claude Code | No disponible — estimar | No disponible — estimar | No disponible — estimar |
+| Skills especializadas | Delegación automática | Leer SKILL.md manualmente | Leer SKILL.md manualmente | Leer SKILL.md e instrucciones manualmente |
+
+### Instrucción para cualquier IA — sin MCP
+
+Si tu entorno **no tiene MCP de Supabase**:
+1. Ejecutar `node scripts/generate-supabase-migration.mjs` → genera `supabase/migrations/001_initial_schema.sql` y `002_seed_admin.sql`
+2. Abrir Supabase Dashboard → SQL Editor → pegar y ejecutar en orden
+3. Credenciales del admin en `credentials.local.json`
+
+Si tu entorno **no soporta skill delegation**:
+- Leer directamente el archivo SKILL.md de la skill indicada y seguir su Workflow
+- Todas las skills tienen fallback de ejecución manual explícito
+
+### Skills → archivos equivalentes para IAs sin skill system
+
+| Skill | Archivo equivalente a leer |
+|---|---|
+| `sitio-hoy-briefing` | `core/01-onboarding-tecnico.md` + `core/02-briefing.md` |
+| `sitio-hoy-scaffold` | `sitio-hoy-scaffold/SKILL.md` + copiar `assets/template-next-supabase/` |
+| `sitio-hoy-database` | `sitio-hoy-database/SKILL.md` + `scripts/generate-supabase-migration.mjs` |
+| `sitio-hoy-qa` | `core/11-qa-checklist.md` + `npm run sitiohoy:validate` |
+| `sitio-hoy-launch-automation` | `core/15-deploy-vercel.md` |
+| `sitio-hoy-project-director` | `core/04-design-system.md` |
 
 ---
 

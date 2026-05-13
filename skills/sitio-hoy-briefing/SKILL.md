@@ -27,15 +27,26 @@ Usar antes de `sitio-hoy-scaffold` cuando:
 ## Workflow
 
 1. Enviar el cuestionario de `references/questions.md`.
-2. Esperar respuestas del cliente.
+2. Esperar respuestas del cliente. **No continuar hasta recibirlas.**
 3. Normalizar internamente las respuestas al contrato `references/intake-schema.md`.
-4. Guardar el JSON normalizado en `.sitiohoy/intake.json`.
-5. Ejecutar:
+4. Crear carpeta `.sitiohoy/` en la raíz si no existe.
+5. Guardar el JSON normalizado en `.sitiohoy/intake.json`.
+6. Generar `sitiohoy.config.json` desde el intake (ver estructura en `references/intake-schema.md`).
+7. Generar `brief.md` con: negocio, audiencia, tono, identidad visual, catálogo, páginas, contacto, redes, assets faltantes.
+8. Validar la config:
    ```bash
-   node scripts/generate-briefing-artifacts.mjs .sitiohoy/intake.json
+   node scripts/validate-config.mjs    # si el script existe en el proyecto
    ```
-6. Revisar que los artefactos generados sean coherentes.
-7. Continuar con `sitio-hoy-scaffold`.
+   Si el script no existe aún, validar manualmente que `sitiohoy.config.json` cumpla los campos requeridos.
+9. Continuar con `sitio-hoy-scaffold`.
+
+## Fallback sin skill system (cualquier IA)
+
+Si tu entorno no soporta delegación a skills:
+1. Leer `references/questions.md` y enviar las preguntas al cliente
+2. Con las respuestas, construir `intake.json` siguiendo `references/intake-schema.md`
+3. Crear `sitiohoy.config.json` y `brief.md` manualmente
+4. No se requiere ejecutar ningún script — los artefactos son archivos JSON y Markdown
 
 ## Reglas de normalización
 

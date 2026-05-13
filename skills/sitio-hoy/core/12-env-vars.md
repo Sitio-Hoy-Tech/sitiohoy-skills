@@ -92,7 +92,7 @@ export const getTenantConfig = unstable_cache(
     return data
   },
   ['tenant-config'],
-  { tags: [TAGS.TENANT], revalidate: 3600 },  // Cache 1 hora — rara vez cambia
+  { tags: [TAGS.TENANT] },  // ISR on-demand únicamente — invalidar con revalidateTag(TAGS.TENANT)
 )
 ```
 

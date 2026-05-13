@@ -54,10 +54,45 @@ CREATE POLICY "tenant_delete" ON TABLA_NOMBRE FOR DELETE TO authenticated
 
 ### `orders` — compradores anónimos pueden ver su propio pedido por tracking_token
 
-```sql
-CREATE POLICY "anon_tracking" ON orders FOR SELECT TO anon
-  USING (tracking_token = current_setting('request.jwt.claims', true)::json ->> 'tracking_token');
+**NO usar RLS anon para tracking.** El JWT anon de Supabase no lleva claims personalizados,
+por lo que una policy anon sobre `tracking_token` no funciona en la práctica.
+
+**Patrón correcto:** Server Action con service role, filtrando `tenant_id` + `tracking_token`:
+
+```typescript
+// lib/data/orders.ts
+export const getOrderByToken = async (trackingToken: string) => {
+  const supabase = createServiceClient()   // service role — solo server
+  const tenantId = process.env.NEXT_PUBLIC_TENANT_ID!
+  const { data } = await supabase
+    .from('orders')
+    .select(`
+      id, status, payment_status, total, currency,
+      customer_first_name, customer_last_name,
+      shipping_tracking_number, shipping_carrier,
+      created_at, updated_at,
+      order_items(name, variant_name, quantity, unit_price)
+    `)
+    .eq('tenant_id', tenantId)
+    .eq('tracking_token', trackingToken)
+    .single()
+  return data
+}
 ```
+
+```typescript
+// app/(public)/pedidos/[token]/page.tsx
+import { getOrderByToken } from '@/lib/data/orders'
+import { notFound } from 'next/navigation'
+
+export default async function TrackingPage({ params }: { params: { token: string } }) {
+  const order = await getOrderByToken(params.token)
+  if (!order) notFound()
+  // render...
+}
+```
+
+La página de tracking **nunca expone RLS anon** — usa service role + filtro doble `tenant_id` + `tracking_token`.
 
 ### `order_items` — acceso via orders (JOIN implícito)
 

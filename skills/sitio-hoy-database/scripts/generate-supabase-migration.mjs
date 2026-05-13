@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { randomBytes } from 'node:crypto'
 import path from 'node:path'
 
 const args = new Map()
@@ -19,6 +20,39 @@ if (!plan && existsSync(path.join(root, 'sitiohoy.config.json'))) {
 }
 
 plan = plan || 'esencial'
+
+// Leer config del negocio para el seed
+let businessName = 'Mi Negocio'
+let tenantSlug = 'mi-negocio'
+if (existsSync(path.join(root, 'sitiohoy.config.json'))) {
+  const config = JSON.parse(await readFile(path.join(root, 'sitiohoy.config.json'), 'utf8'))
+  if (config.business?.name) businessName = config.business.name
+  if (config.business?.slug) tenantSlug = config.business.slug
+}
+
+// Generar contraseña segura para el usuario admin
+const adminPassword = randomBytes(16).toString('base64url')
+const adminEmail = 'admin@sitiohoy.com.ar'
+
+// Guardar credenciales en archivo gitignoreado
+const credentialsPath = path.join(root, 'credentials.local.json')
+const credentials = { email: adminEmail, password: adminPassword, role: 'owner', note: 'Credenciales del usuario admin generadas por generate-supabase-migration. NO SUBIR A GIT.' }
+await writeFile(credentialsPath, JSON.stringify(credentials, null, 2) + '\n')
+
+// Asegurar que credentials.local.json esté en .gitignore
+const gitignorePath = path.join(root, '.gitignore')
+if (existsSync(gitignorePath)) {
+  const gitignore = await readFile(gitignorePath, 'utf8')
+  if (!gitignore.includes('credentials.local.json')) {
+    await writeFile(gitignorePath, gitignore.trimEnd() + '\ncredentials.local.json\n')
+  }
+} else {
+  await writeFile(gitignorePath, 'credentials.local.json\n')
+}
+
+console.log(`\n✅ Credenciales admin guardadas en credentials.local.json (gitignoreado)`)
+console.log(`   Email: ${adminEmail}`)
+console.log(`   Password: ${adminPassword}\n`)
 
 const sql = `-- SitioHoy initial schema
 -- Plan activo: ${plan}
@@ -322,7 +356,54 @@ CREATE POLICY "public_assets_tenant_insert" ON storage.objects FOR INSERT TO aut
   );
 `
 
+// Seed: tenant inicial + usuario admin
+// IMPORTANTE: ejecutar este seed DESPUÉS de crear el usuario en Supabase Auth con el email y password de credentials.local.json
+// El seed asume que el usuario ya existe en auth.users. Si usás Supabase MCP, crear el usuario primero con supabase.auth.admin.createUser()
+const seed = `
+-- ============================================================
+-- SEED INICIAL — tenant + usuario admin
+-- Ejecutar DESPUÉS de crear el usuario en Supabase Auth.
+-- Email y password están en credentials.local.json (gitignoreado).
+-- ============================================================
+
+DO $$
+DECLARE
+  v_tenant_id uuid;
+  v_user_id   uuid;
+BEGIN
+  -- 1. Crear tenant si no existe
+  INSERT INTO public.tenants (name, slug, plan, status)
+  VALUES ('${businessName}', '${tenantSlug}', '${plan}', 'active')
+  ON CONFLICT (slug) DO NOTHING;
+
+  SELECT id INTO v_tenant_id FROM public.tenants WHERE slug = '${tenantSlug}';
+
+  -- 2. Buscar usuario admin en auth.users por email
+  SELECT id INTO v_user_id FROM auth.users WHERE email = '${adminEmail}' LIMIT 1;
+
+  IF v_user_id IS NULL THEN
+    RAISE NOTICE 'Usuario % no encontrado en auth.users. Crealo en Supabase Auth primero.', '${adminEmail}';
+    RETURN;
+  END IF;
+
+  -- 3. Asociar usuario al tenant como owner
+  INSERT INTO public.user_tenants (user_id, tenant_id, role)
+  VALUES (v_user_id, v_tenant_id, 'owner')
+  ON CONFLICT (user_id, tenant_id) DO NOTHING;
+
+  -- 4. Inyectar tenant_id en app_metadata del usuario para que get_tenant_id() funcione
+  UPDATE auth.users
+  SET raw_app_meta_data = raw_app_meta_data || jsonb_build_object('tenant_id', v_tenant_id)
+  WHERE id = v_user_id;
+
+  RAISE NOTICE 'Seed OK — tenant_id: %, user_id: %', v_tenant_id, v_user_id;
+END $$;
+`
+
 const output = path.join(root, 'supabase', 'migrations', '001_initial_schema.sql')
+const seedOutput = path.join(root, 'supabase', 'migrations', '002_seed_admin.sql')
 await mkdir(path.dirname(output), { recursive: true })
 await writeFile(output, `${sql}\n`)
+await writeFile(seedOutput, seed.trimStart())
 console.log(output)
+console.log(seedOutput)

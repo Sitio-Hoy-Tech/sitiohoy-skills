@@ -49,8 +49,9 @@ Crear una base consistente antes de escribir UI:
    ```
 6. Crear `sitiohoy.config.json` con plan, negocio e integraciones.
 7. Completar `.env.local` desde `.env.example`.
-8. Ejecutar:
+8. Ejecutar en orden:
    ```bash
+   npm run sitiohoy:validate-config   # Valida sitiohoy.config.json antes de todo
    npm run build
    npm run sitiohoy:validate
    ```

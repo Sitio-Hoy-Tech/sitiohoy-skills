@@ -66,13 +66,25 @@ Al completar el checklist ✅ de cada módulo, agregar un objeto al array `modul
 }
 ```
 
-### Cómo estimar tokens
+### Cómo registrar tokens y archivos — automatizado
+
+Al finalizar cada módulo, ejecutar:
+
+```bash
+node scripts/update-tracking.mjs --modulo N --nombre "Nombre del Módulo"
+```
+
+El script:
+1. Lee `proyecto-tracking.json` existente
+2. Detecta archivos creados/modificados con `git diff --name-only HEAD~1` o `git status --short`
+3. Registra timestamps y calcula duración automáticamente
+4. Deja `tokens_*` en 0 para completar manualmente o con `/cost` en Claude Code CLI
 
 **Si usás Claude Code CLI:**
 Ejecutar `/cost` al finalizar el módulo — muestra tokens reales de la sesión.
-Como el tracking es por módulo, anotar la diferencia entre el `/cost` del módulo anterior y el actual.
+Anotar la diferencia entre el `/cost` del módulo anterior y el actual, y actualizarlos en el JSON.
 
-**Si usás otro entorno (Cursor, Windsurf, GPT):**
+**Si usás otro entorno (Cursor, Windsurf, OpenCode, GPT, Gemini):**
 Estimar según cantidad de archivos generados:
 - Archivo pequeño (< 50 líneas): ~2.000 tokens output
 - Archivo mediano (50-150 líneas): ~5.000 tokens output

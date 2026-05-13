@@ -32,6 +32,14 @@ for (const file of codeFiles) {
   if (/['"]use client['"]/.test(text) && /createServiceClient/.test(text)) {
     add('error', 'No usar createServiceClient en componentes client.', rel)
   }
+  // ISR: detectar revalidate numérico en unstable_cache (debe ser solo on-demand)
+  if (/unstable_cache/.test(text) && /revalidate\s*:\s*\d+/.test(text)) {
+    add('warning', 'unstable_cache con revalidate numérico — usar solo ISR on-demand (sin revalidate).', rel)
+  }
+  // Webhook MP sin verificación de firma
+  if (/webhooks\/mercadopago/.test(rel) && !/MP_WEBHOOK_SECRET/.test(text)) {
+    add('error', 'Webhook de MercadoPago sin verificación de firma (MP_WEBHOOK_SECRET). Ver integraciones/mercadopago.md.', rel)
+  }
 }
 
 if (!existsSync(path.join(root, 'styles', 'tokens.css'))) add('error', 'Falta styles/tokens.css.')
