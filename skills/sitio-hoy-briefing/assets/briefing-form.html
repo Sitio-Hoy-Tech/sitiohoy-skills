@@ -1,0 +1,2073 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SitioHoy — Briefing</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --green: #10B981;
+  --green-hover: #059669;
+  --green-light: rgba(16,185,129,0.1);
+  --dark: #0F172A;
+  --muted: #6B7280;
+  --border: #E5E7EB;
+  --bg: #FAFAFA;
+  --white: #ffffff;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+  --radius-card: 10px;
+  --radius-input: 8px;
+  --radius-btn: 6px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, sans-serif;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--dark);
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
+
+/* ── HEADER ── */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  box-shadow: var(--shadow);
+}
+.header-inner {
+  max-width: 720px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+}
+.header-logo {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--dark);
+  letter-spacing: -0.02em;
+}
+.header-logo span { color: var(--green); }
+.header-step {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+/* ── PROGRESS BAR ── */
+.progress-wrap {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px 12px;
+}
+.progress-inner {
+  max-width: 720px;
+  margin: 0 auto;
+}
+.progress-dots {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.progress-dot {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  transition: background 0.3s;
+}
+.progress-dot.active { background: var(--green); }
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+/* ── MAIN CONTENT ── */
+.main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 24px 0;
+}
+
+/* ── CARD ── */
+.card {
+  background: var(--white);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+  padding: 28px;
+  margin-bottom: 20px;
+}
+.card-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+}
+.card-subtitle {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+.section-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+/* ── FORM ELEMENTS ── */
+.field { margin-bottom: 20px; }
+.field:last-child { margin-bottom: 0; }
+label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--dark);
+  margin-bottom: 6px;
+}
+label .required { color: var(--green); margin-left: 2px; }
+label .hint {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-left: 6px;
+}
+input[type="text"], input[type="tel"], input[type="email"], input[type="url"],
+input[type="number"], input[type="color"], select, textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  font-family: var(--font);
+  font-size: 0.88rem;
+  color: var(--dark);
+  background: var(--white);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-light);
+}
+textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+input[type="color"] {
+  width: 48px;
+  height: 40px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.color-row { display: flex; gap: 8px; align-items: center; }
+.color-row input[type="text"] { flex: 1; }
+.char-counter {
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.char-counter.warn { color: #EF4444; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 520px) { .field-row { grid-template-columns: 1fr; } }
+
+/* ── PLAN CARDS ── */
+.plan-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 520px) { .plan-cards { grid-template-columns: 1fr; } }
+.plan-card {
+  border: 2px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+.plan-card:hover { border-color: var(--green); box-shadow: var(--shadow-md); }
+.plan-card.selected { border-color: var(--green); background: #F0FDF9; }
+.plan-card.selected .plan-badge { background: var(--green); color: white; }
+.plan-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: var(--border);
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.plan-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--dark);
+  margin-bottom: 2px;
+}
+.plan-price {
+  font-size: 0.78rem;
+  color: var(--green);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.plan-features { list-style: none; }
+.plan-features li {
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding: 2px 0;
+}
+.plan-features li::before { content: "✓ "; color: var(--green); font-weight: 700; }
+
+/* ── RADIO / CHECKBOX CARDS ── */
+.option-cards { display: grid; gap: 10px; }
+.option-cards.cols-2 { grid-template-columns: 1fr 1fr; }
+.option-cards.cols-3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 520px) { .option-cards.cols-2, .option-cards.cols-3 { grid-template-columns: 1fr; } }
+.option-card {
+  border: 2px solid var(--border);
+  border-radius: var(--radius-input);
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.option-card:hover { border-color: var(--green); }
+.option-card.selected { border-color: var(--green); background: #F0FDF9; }
+.option-card-dot {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 1px;
+  transition: border-color 0.2s;
+}
+.option-card.selected .option-card-dot {
+  border-color: var(--green);
+  background: var(--green);
+  box-shadow: inset 0 0 0 3px white;
+}
+.option-card-body { flex: 1; }
+.option-card-label { font-size: 0.88rem; font-weight: 600; color: var(--dark); }
+.option-card-desc { font-size: 0.75rem; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+
+/* ── CHECKBOXES ── */
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+.checkbox-item:last-child { border-bottom: none; }
+.checkbox-item input[type="checkbox"] { display: none; }
+.checkbox-box {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.checkbox-item input:checked + .checkbox-box {
+  background: var(--green);
+  border-color: var(--green);
+}
+.checkbox-item input:checked + .checkbox-box::after {
+  content: "";
+  width: 10px;
+  height: 7px;
+  border-left: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: rotate(-45deg) translateY(-1px);
+  display: block;
+}
+.checkbox-label { font-size: 0.88rem; color: var(--dark); }
+.checkbox-desc { font-size: 0.75rem; color: var(--muted); margin-top: 1px; }
+
+.checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+@media (max-width: 520px) { .checkbox-grid { grid-template-columns: 1fr; } }
+.checkbox-grid .checkbox-item { border-bottom: 1px solid var(--border); border-right: none; }
+
+/* ── TOGGLE ── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+.toggle-info { flex: 1; }
+.toggle-name { font-size: 0.88rem; font-weight: 600; color: var(--dark); }
+.toggle-hint { font-size: 0.75rem; color: var(--muted); margin-top: 1px; }
+.toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.toggle input { display: none; }
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 11px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle input:checked ~ .toggle-track { background: var(--green); }
+.toggle-thumb {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  pointer-events: none;
+}
+.toggle input:checked ~ .toggle-thumb { transform: translateX(18px); }
+
+/* ── TAG SELECTOR (chips) ── */
+.tag-selector { display: flex; flex-wrap: wrap; gap: 8px; }
+.tag-chip {
+  padding: 6px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--muted);
+  font-weight: 500;
+  background: var(--white);
+}
+.tag-chip:hover { border-color: var(--green); color: var(--green); }
+.tag-chip.selected { border-color: var(--green); background: var(--green); color: white; }
+
+/* ── TAG INPUT (add-by-enter) ── */
+.tag-input-wrap { display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  border: 1px solid var(--border); border-radius: var(--radius-input); padding: 8px 10px;
+  min-height: 44px; cursor: text; transition: border-color 0.2s, box-shadow 0.2s;
+}
+.tag-input-wrap:focus-within {
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-light);
+}
+.tag-input-chip {
+  display: flex; align-items: center; gap: 4px;
+  background: #F0FDF9; border: 1px solid #A7F3D0;
+  border-radius: 4px; padding: 2px 8px; font-size: 0.78rem; color: var(--green); font-weight: 600;
+}
+.tag-input-chip button {
+  background: none; border: none; cursor: pointer; color: var(--green);
+  font-size: 0.9rem; line-height: 1; padding: 0; margin: 0; display: flex; align-items: center;
+}
+.tag-input-field {
+  border: none; outline: none; font-size: 0.85rem; color: var(--dark);
+  font-family: var(--font); flex: 1; min-width: 80px; background: transparent;
+}
+
+/* ── SOCIAL ROWS ── */
+.social-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.social-row select { width: 140px; flex-shrink: 0; }
+.social-row input { flex: 1; }
+.social-row button {
+  background: none; border: none; color: #EF4444; cursor: pointer; font-size: 1.1rem;
+  padding: 4px; border-radius: 4px; display: flex; align-items: center; transition: background 0.15s;
+}
+.social-row button:hover { background: #FEF2F2; }
+.add-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.82rem; color: var(--green); font-weight: 600;
+  background: none; border: 1.5px dashed #A7F3D0;
+  border-radius: var(--radius-btn); padding: 7px 14px; cursor: pointer;
+  transition: all 0.15s; margin-top: 4px;
+}
+.add-btn:hover { background: #F0FDF9; border-color: var(--green); }
+
+/* ── PHONE INPUT ── */
+.phone-wrap { display: flex; gap: 0; }
+.phone-prefix {
+  display: flex; align-items: center; gap: 6px;
+  border: 1px solid var(--border); border-right: none;
+  border-radius: var(--radius-input) 0 0 var(--radius-input);
+  padding: 10px 12px;
+  background: var(--bg);
+  font-size: 0.85rem; font-weight: 600; color: var(--dark);
+  white-space: nowrap;
+}
+.phone-flag { font-size: 1rem; }
+.phone-wrap input {
+  border-radius: 0 var(--radius-input) var(--radius-input) 0;
+}
+
+/* ── RADIO GROUP ── */
+.radio-group { display: flex; flex-direction: column; gap: 8px; }
+.radio-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; border: 1.5px solid var(--border);
+  border-radius: var(--radius-input); cursor: pointer; transition: border-color 0.2s;
+}
+.radio-item:hover { border-color: var(--green); }
+.radio-item.selected { border-color: var(--green); background: #F0FDF9; }
+.radio-item input { display: none; }
+.radio-dot {
+  width: 16px; height: 16px; border: 2px solid var(--border);
+  border-radius: 50%; flex-shrink: 0; margin-top: 1px; transition: all 0.2s;
+}
+.radio-item.selected .radio-dot {
+  border-color: var(--green); background: var(--green);
+  box-shadow: inset 0 0 0 3px white;
+}
+.radio-body { flex: 1; }
+.radio-label { font-size: 0.88rem; font-weight: 600; color: var(--dark); }
+.radio-desc { font-size: 0.75rem; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+
+/* ── FILE UPLOAD ── */
+.file-drop {
+  border: 2px dashed var(--border); border-radius: var(--radius-card);
+  padding: 32px; text-align: center; cursor: pointer;
+  transition: all 0.2s; background: var(--bg);
+}
+.file-drop:hover, .file-drop.dragover {
+  border-color: var(--green); background: #F0FDF9;
+}
+.file-drop-icon { font-size: 2rem; margin-bottom: 8px; }
+.file-drop-title { font-size: 0.9rem; font-weight: 600; color: var(--dark); margin-bottom: 4px; }
+.file-drop-hint { font-size: 0.78rem; color: var(--muted); }
+.file-drop input[type="file"] { display: none; }
+.file-list { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.file-item {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius-input); padding: 8px 12px;
+}
+.file-item-name { flex: 1; font-size: 0.82rem; color: var(--dark); truncate: ellipsis; overflow: hidden; white-space: nowrap; }
+.file-item select { width: 130px; font-size: 0.78rem; padding: 4px 6px; }
+.file-item button {
+  background: none; border: none; cursor: pointer; color: #EF4444; font-size: 1rem;
+  padding: 2px; border-radius: 3px; display: flex; align-items: center;
+}
+
+/* ── INFO CARD ── */
+.info-card {
+  background: #F0FDF9; border: 1px solid #A7F3D0;
+  border-radius: var(--radius-card); padding: 16px 20px; margin-bottom: 16px;
+}
+.info-card-title { font-size: 0.85rem; font-weight: 700; color: #065F46; margin-bottom: 6px; }
+.info-card pre {
+  font-size: 0.75rem; color: #065F46; background: transparent;
+  font-family: 'SFMono-Regular', 'Consolas', monospace;
+  white-space: pre; overflow-x: auto;
+}
+.info-card-note { font-size: 0.78rem; color: #065F46; margin-top: 8px; line-height: 1.5; }
+
+/* ── PRICE RANGE ── */
+.price-range { display: flex; align-items: center; gap: 10px; }
+.price-range span { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+
+/* ── SUMMARY ── */
+.summary-section { margin-bottom: 20px; }
+.summary-section-title {
+  font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--muted); margin-bottom: 8px;
+  padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+.summary-row {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 6px 0; border-bottom: 1px solid var(--bg); font-size: 0.85rem;
+}
+.summary-row:last-child { border-bottom: none; }
+.summary-key { color: var(--muted); font-weight: 500; flex-shrink: 0; margin-right: 16px; }
+.summary-val { color: var(--dark); font-weight: 600; text-align: right; word-break: break-word; }
+
+/* ── NAVIGATION BUTTONS ── */
+.nav-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--white); border-top: 1px solid var(--border);
+  padding: 12px 24px;
+  z-index: 100;
+}
+.nav-inner {
+  max-width: 720px; margin: 0 auto;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 22px; border-radius: var(--radius-btn);
+  font-family: var(--font); font-size: 0.88rem; font-weight: 600;
+  cursor: pointer; border: none; transition: all 0.15s; text-decoration: none;
+}
+.btn-primary { background: var(--green); color: white; }
+.btn-primary:hover { background: var(--green-hover); }
+.btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+.btn-secondary { background: var(--bg); color: var(--dark); border: 1.5px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+.btn-ghost { background: none; color: var(--muted); border: none; font-size: 0.82rem; padding: 10px 12px; }
+
+/* ── SUBMIT BUTTON ── */
+.submit-btn {
+  width: 100%; padding: 14px; font-size: 1rem; font-weight: 700;
+  background: var(--green); color: white; border: none; border-radius: var(--radius-btn);
+  cursor: pointer; transition: background 0.15s; font-family: var(--font);
+  letter-spacing: 0.01em; margin-top: 12px;
+}
+.submit-btn:hover { background: var(--green-hover); }
+.submit-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+/* ── STEP VISIBILITY ── */
+.step { display: none; }
+.step.active { display: block; }
+
+/* ── CONDITIONAL ── */
+.conditional { display: none; }
+.conditional.visible { display: block; }
+
+/* ── SUCCESS SCREEN ── */
+#success-screen {
+  display: none; text-align: center;
+  padding: 60px 24px;
+  max-width: 480px; margin: 0 auto;
+}
+#success-screen.visible { display: block; }
+.success-icon {
+  font-size: 4rem; margin-bottom: 16px;
+  animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes pop {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.success-title {
+  font-size: 1.6rem; font-weight: 800; color: var(--dark);
+  margin-bottom: 8px; letter-spacing: -0.03em;
+}
+.success-sub {
+  font-size: 0.9rem; color: var(--muted); line-height: 1.6; margin-bottom: 24px;
+}
+.confetti-wrap {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none; overflow: hidden; z-index: 9999;
+}
+.confetti-piece {
+  position: absolute; width: 10px; height: 10px; top: -10px;
+  animation: confetti-fall linear forwards;
+}
+@keyframes confetti-fall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+.loading-spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.4); border-top-color: white;
+  border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── VALIDATION ── */
+.field-error {
+  font-size: 0.75rem; color: #EF4444; margin-top: 4px; display: none;
+}
+.field-error.visible { display: block; }
+input.invalid, select.invalid, textarea.invalid {
+  border-color: #EF4444;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.1);
+}
+
+/* ── MISC ── */
+.note { font-size: 0.78rem; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+.badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.badge {
+  font-size: 0.7rem; font-weight: 700; padding: 2px 8px;
+  border-radius: 10px; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.badge-green { background: #D1FAE5; color: #065F46; }
+</style>
+</head>
+<body>
+
+<!-- CONFETTI -->
+<div class="confetti-wrap" id="confetti-wrap"></div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-logo">Sitio<span>Hoy</span> <span style="color:var(--muted);font-weight:400">Briefing</span></div>
+    <div class="header-step" id="step-indicator">Paso 1 de 10</div>
+  </div>
+</div>
+
+<!-- PROGRESS -->
+<div class="progress-wrap">
+  <div class="progress-inner">
+    <div class="progress-dots" id="progress-dots">
+      <!-- generated by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="form-main">
+
+  <!-- ══════════════════════════════════════════
+       STEP 1 — PLAN Y ALCANCE
+  ══════════════════════════════════════════ -->
+  <div class="step active" id="step-1">
+    <div class="card">
+      <div class="card-title">Plan y Alcance</div>
+      <div class="card-subtitle">Elegí el plan que mejor se adapte a tu negocio</div>
+
+      <div class="field">
+        <label>Plan<span class="required">*</span></label>
+        <div class="plan-cards">
+          <div class="plan-card selected" data-plan="esencial" onclick="selectPlan(this,'esencial')">
+            <div class="plan-badge">Esencial</div>
+            <div class="plan-name">Esencial</div>
+            <div class="plan-price">Ideal para empezar</div>
+            <ul class="plan-features">
+              <li>Catálogo online</li>
+              <li>Botón WhatsApp</li>
+              <li>Hasta 50 productos</li>
+              <li>Sin checkout</li>
+            </ul>
+          </div>
+          <div class="plan-card" data-plan="emprendimiento" onclick="selectPlan(this,'emprendimiento')">
+            <div class="plan-badge">Emprendimiento</div>
+            <div class="plan-name">Emprendimiento</div>
+            <div class="plan-price">Con tienda online</div>
+            <ul class="plan-features">
+              <li>Tienda completa</li>
+              <li>MercadoPago</li>
+              <li>Hasta 200 productos</li>
+              <li>Envíos por zona</li>
+            </ul>
+          </div>
+          <div class="plan-card" data-plan="empresa" onclick="selectPlan(this,'empresa')">
+            <div class="plan-badge">Empresa</div>
+            <div class="plan-name">Empresa</div>
+            <div class="plan-price">Todo incluido</div>
+            <ul class="plan-features">
+              <li>Tienda completa</li>
+              <li>MercadoPago</li>
+              <li>Productos ilimitados</li>
+              <li>Envia.com integrado</li>
+            </ul>
+          </div>
+        </div>
+        <div class="field-error" id="plan-error">Por favor seleccioná un plan</div>
+      </div>
+
+      <!-- Shipping — solo para empresa -->
+      <div class="conditional" id="shipping-section">
+        <hr class="section-divider">
+        <div class="field">
+          <label>Gestión de envíos<span class="required">*</span></label>
+          <div class="radio-group" id="shipping-group">
+            <label class="radio-item selected" onclick="selectRadio('shipping','correo')">
+              <input type="radio" name="shipping" value="correo">
+              <div class="radio-dot"></div>
+              <div class="radio-body">
+                <div class="radio-label">Correo Argentino directo</div>
+                <div class="radio-desc">Cotización en tiempo real + pre-registro automático, sin costo extra. Imprimís etiquetas desde MiCorreo.</div>
+              </div>
+            </label>
+            <label class="radio-item" onclick="selectRadio('shipping','envia')">
+              <input type="radio" name="shipping" value="envia">
+              <div class="radio-dot"></div>
+              <div class="radio-body">
+                <div class="radio-label">Envia.com</div>
+                <div class="radio-desc">Cotización en tiempo real + etiquetas PDF automáticas, multicarrier. Requiere cuenta y token API propio.</div>
+              </div>
+            </label>
+            <label class="radio-item" onclick="selectRadio('shipping','zonas')">
+              <input type="radio" name="shipping" value="zonas">
+              <div class="radio-dot"></div>
+              <div class="radio-body">
+                <div class="radio-label">Precios fijos por zona</div>
+                <div class="radio-desc">Vos definís el costo por provincia o región. Más simple, sin integración externa.</div>
+              </div>
+            </label>
+            <label class="radio-item" onclick="selectRadio('shipping','sin-envios')">
+              <input type="radio" name="shipping" value="sin-envios">
+              <div class="radio-dot"></div>
+              <div class="radio-body">
+                <div class="radio-label">Sin envíos</div>
+                <div class="radio-desc">Solo retiro en local o producto digital.</div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- MercadoPago — solo no-esencial -->
+      <div class="conditional" id="mp-section">
+        <hr class="section-divider">
+        <label class="checkbox-item" id="mp-check-label">
+          <input type="checkbox" id="mp-active">
+          <div class="checkbox-box"></div>
+          <div>
+            <div class="checkbox-label">¿Tenés MercadoPago activo?</div>
+            <div class="checkbox-desc">Necesitás una cuenta de vendedor verificada para procesar pagos</div>
+          </div>
+        </label>
+      </div>
+
+      <hr class="section-divider">
+
+      <!-- Resend -->
+      <div class="field">
+        <label class="checkbox-item">
+          <input type="checkbox" id="resend-check">
+          <div class="checkbox-box"></div>
+          <div>
+            <div class="checkbox-label">¿Necesitás emails automáticos al comprador? <span class="badge badge-green">Resend</span></div>
+            <div class="checkbox-desc">Confirmación de compra, actualizaciones de envío y más</div>
+          </div>
+        </label>
+      </div>
+
+      <hr class="section-divider">
+
+      <!-- Domain -->
+      <div class="field">
+        <label>Dominio<span class="required">*</span></label>
+        <div class="radio-group" id="domain-group">
+          <label class="radio-item selected" onclick="selectRadio('domain','owned'); toggleDomainInput('owned')">
+            <input type="radio" name="domain-status" value="owned">
+            <div class="radio-dot"></div>
+            <div class="radio-body"><div class="radio-label">Tengo dominio propio</div></div>
+          </label>
+          <label class="radio-item" onclick="selectRadio('domain','pending_purchase'); toggleDomainInput('pending_purchase')">
+            <input type="radio" name="domain-status" value="pending_purchase">
+            <div class="radio-dot"></div>
+            <div class="radio-body"><div class="radio-label">Aún no tengo — voy a comprar uno</div></div>
+          </label>
+        </div>
+        <div class="conditional visible" id="domain-input-wrap" style="margin-top:10px">
+          <input type="text" id="domain-value" placeholder="https://www.tudominio.com">
+        </div>
+      </div>
+
+      <hr class="section-divider">
+
+      <!-- Editor -->
+      <div class="field">
+        <label>¿Con qué IA / editor estás trabajando?<span class="required">*</span></label>
+        <select id="editor-select">
+          <option value="">Seleccioná una opción</option>
+          <option value="claude-code">Claude Code</option>
+          <option value="cursor">Cursor</option>
+          <option value="opencode">OpenCode</option>
+          <option value="codex">Codex (OpenAI)</option>
+          <option value="gemini">Gemini</option>
+          <option value="windsurf">Windsurf</option>
+          <option value="copilot">GitHub Copilot</option>
+          <option value="other">Otro</option>
+        </select>
+      </div>
+
+      <hr class="section-divider">
+
+      <!-- MCP checks -->
+      <div class="field">
+        <label>MCPs disponibles</label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="supabase-mcp">
+          <div class="checkbox-box"></div>
+          <div>
+            <div class="checkbox-label">Tengo MCP de Supabase configurado</div>
+            <div class="checkbox-desc">Permite al agente interactuar directamente con tu base de datos</div>
+          </div>
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="aidesigner-mcp">
+          <div class="checkbox-box"></div>
+          <div>
+            <div class="checkbox-label">Tengo AIDesigner MCP disponible</div>
+            <div class="checkbox-desc">Permite generación de assets visuales asistida por IA</div>
+          </div>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       STEP 2 — TU NEGOCIO
+  ══════════════════════════════════════════ -->
+  <div class="step" id="step-2">
+    <div class="card">
+      <div class="card-title">Tu Negocio</div>
+      <div class="card-subtitle">Contanos sobre tu emprendimiento</div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="business-name">Nombre del negocio<span class="required">*</span></label>
+          <input type="text" id="business-name" placeholder="Ej: La Boutique de Ana">
+          <div class="field-error" id="business-name-error">Campo requerido</div>
+        </div>
+        <div class="field">
+          <label for="business-industry">Rubro<span class="required">*</span></label>
+          <input type="text" id="business-industry" placeholder="Ej: Indumentaria femenina, Pastelería...">
+          <div class="field-error" id="business-industry-error">Campo requerido</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="business-desc">Descripción del negocio<span class="required">*</span> <span class="hint">máx. 300 caracteres</span></label>
+        <textarea id="business-desc" placeholder="En 1-2 oraciones, ¿qué hacés y para quién?" rows="3" maxlength="300" oninput="updateCounter(this,'desc-counter')"></textarea>
+        <div class="char-counter" id="desc-counter">0 / 300</div>
+        <div class="field-error" id="business-desc-error">Campo requerido</div>
+      </div>
+
+      <div class="field">
+        <label for="business-diff">Diferencial frente a la competencia <span class="hint">máx. 200 caracteres</span></label>
+        <textarea id="business-diff" placeholder="¿Qué te hace único/a? ¿Por qué elegirte a vos?" rows="2" maxlength="200" oninput="updateCounter(this,'diff-counter')"></textarea>
+        <div class="char-counter" id="diff-counter">0 / 200</div>
+      </div>
+
+      <div class="field">
+        <label for="visual-refs">Referentes o competidores que admires visualmente</label>
+        <textarea id="visual-refs" placeholder="Ej: Zara, Rapsodia, Tiendas que te gustan y por qué..." rows="2"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       STEP 3 — CLIENTE IDEAL
+  ══════════════════════════════════════════ -->
+  <div class="step" id="step-3">
+    <div class="card">
+      <div class="card-title">Cliente Ideal</div>
+      <div class="card-subtitle">¿A quién le hablás?</div>
+
+      <div class="field">
+        <label for="audience-profile">Perfil de tu cliente ideal</label>
+        <textarea id="audience-profile" placeholder="Edad, género, intereses, nivel socioeconómico, dónde vive..." rows="3"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="audience-problem">¿Qué problema o necesidad resolvés?</label>
+        <textarea id="audience-problem" placeholder="¿Qué dificultad tenía tu cliente antes de encontrarte?" rows="2"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="audience-feeling">Sensación deseada al entrar al sitio</label>
+        <input type="text" id="audience-feeling" placeholder="Ej: Confianza, inspiración, urgencia de comprar...">
+      </div>
+
+      <div class="field">
+        <label>Tono de comunicación<span class="required">*</span></label>
+        <div class="option-cards cols-2" id="tone-group">
+          <div class="option-card selected" data-value="cercano" onclick="selectOptionCard('tone-group',this,'cercano','audience-tone')">
+            <div class="option-card-dot"></div>
+            <div class="option-card-body">
+              <div class="option-card-label">Cercano y amigable</div>
+              <div class="option-card-desc">Tuteo, emojis, lenguaje cotidiano</div>
+            </div>
+          </div>
+          <div class="option-card" data-value="profesional" onclick="selectOptionCard('tone-group',this,'profesional','audience-tone')">
+            <div class="option-card-dot"></div>
+            <div class="option-card-body">
+              <div class="option-card-label">Profesional y serio</div>
+              <div class="option-card-desc">Formal, sin tuteo, lenguaje técnico</div>
+            </div>
+          </div>
+          <div class="option-card" data-value="juvenil" onclick="selectOptionCard('tone-group',this,'juvenil','audience-tone')">
+            <div class="option-card-dot"></div>
+            <div class="option-card-body">
+              <div class="option-card-label">Juvenil y dinámico</div>
+              <div class="option-card-desc">Energético, trendy, lenguaje joven</div>
+            </div>
+          </div>
+          <div class="option-card" data-value="exclusivo" onclick="selectOptionCard('tone-group',this,'exclusivo','audience-tone')">
+            <div class="option-card-dot"></div>
+            <div class="option-card-body">
+              <div class="option-card-label">Exclusivo y premium</div>
+              <div class="option-card-desc">Elegante, aspiracional, sofisticado</div>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="audience-tone" value="cercano">
+      </div>
+
+      <div class="field">
+        <label>Dispositivo principal de compra / consulta<span class="required">*</span></label>
+        <div class="option-cards cols-3" id="device-group">
+          <div class="option-card selected" data-value="mobile" onclick="selectOptionCard('device-group',this,'mobile','primary-device')">
+            <div class="option-card-dot"></div>
+            <div class="option-card-body">
+              <div class="option-card-label">📱 Mobile</div>
+              <div class="option-card-desc">La mayoría compra desde el celular</div>
+            </div>
+          </div>
+          <div class="option-card" data-value="desktop" onclick="selectOptionCard('device-group',this,'desktop','primary-device')">
+            <div class="option-card-dot"></div>
+            <div class="option-card-body">
+              <div class="option-card-label">💻 Desktop</div>
+              <div class="option-card-desc">Compras desde computadora</div>
+            </div>
+          </div>
+          <div class="option-card" data-value="mixed" onclick="selectOptionCard('device-group',this,'mixed','primary-device')">
+            <div class="option-card-dot"></div>
+            <div class="option-card-body">
+              <div class="option-card-label">🔀 Ambos</div>
+              <div class="option-card-desc">Uso mixto mobile y desktop</div>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="primary-device" value="mobile">
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       STEP 4 — IDENTIDAD VISUAL
+  ══════════════════════════════════════════ -->
+  <div class="step" id="step-4">
+    <div class="card">
+      <div class="card-title">Identidad Visual</div>
+      <div class="card-subtitle">Colores, estilo y materiales gráficos</div>
+
+      <div class="field">
+        <label>Colores de marca</label>
+        <p class="note" style="margin-bottom:14px">Si no tenés colores definidos, dejá en blanco y los generamos según tu estilo.</p>
+
+        <div class="field" style="margin-bottom:12px">
+          <label style="font-weight:500;color:var(--muted);font-size:0.8rem">Color primario</label>
+          <div class="color-row">
+            <input type="color" id="color-primary" value="#10B981" oninput="syncColorHex(this,'color-primary-hex')">
+            <input type="text" id="color-primary-hex" placeholder="#10B981" maxlength="7" oninput="syncColorPicker(this,'color-primary')" style="width:120px">
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom:12px">
+          <label style="font-weight:500;color:var(--muted);font-size:0.8rem">Color secundario</label>
+          <div class="color-row">
+            <input type="color" id="color-secondary" value="#0F172A" oninput="syncColorHex(this,'color-secondary-hex')">
+            <input type="text" id="color-secondary-hex" placeholder="#0F172A" maxlength="7" oninput="syncColorPicker(this,'color-secondary')" style="width:120px">
+          </div>
+        </div>
+
+        <div class="field">
+          <label style="font-weight:500;color:var(--muted);font-size:0.8rem">Color acento</label>
+          <div class="color-row">
+            <input type="color" id="color-accent" value="#FFFFFF" oninput="syncColorHex(this,'color-accent-hex')">
+            <input type="text" id="color-accent-hex" placeholder="#FFFFFF" maxlength="7" oninput="syncColorPicker(this,'color-accent')" style="width:120px">
+          </div>
+        </div>
+      </div>
+
+      <hr class="section-divider">
+
+      <div class="field">
+        <label for="desired-mood">Sensación / mood deseado del sitio <span class="hint">si no tenés colores definidos</span></label>
+        <input type="text" id="desired-mood" placeholder="Ej: Cálido y natural, Oscuro y elegante, Fresco y moderno...">
+      </div>
+
+      <hr class="section-divider">
+
+      <div class="field">
+        <label>Estilo visual</label>
+        <div class="tag-selector" id="style-selector">
+          <div class="tag-chip" data-value="minimalista" onclick="toggleTagChip(this,'visual-style')">Minimalista</div>
+          <div class="tag-chip" data-value="colorido" onclick="toggleTagChip(this,'visual-style')">Colorido</div>
+          <div class="tag-chip" data-value="corporativo" onclick="toggleTagChip(this,'visual-style')">Corporativo</div>
+          <div class="tag-chip" data-value="vintage" onclick="toggleTagChip(this,'visual-style')">Vintage</div>
+          <div class="tag-chip" data-value="artesanal" onclick="toggleTagChip(this,'visual-style')">Artesanal</div>
+          <div class="tag-chip" data-value="tech" onclick="toggleTagChip(this,'visual-style')">Tech</div>
+          <div class="tag-chip" data-value="lujo" onclick="toggleTagChip(this,'visual-style')">Lujo</div>
+        </div>
+        <input type="hidden" id="visual-style" value="">
+      </div>
+
+      <hr class="section-divider">
+
+      <div class="field">
+        <div class="toggle-row" style="margin-bottom:12px">
+          <div class="toggle-info">
+            <div class="toggle-name">Logo disponible</div>
+            <div class="toggle-hint">¿Tenés un archivo de logo para usar?</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="logo-toggle" onchange="toggleLogoUpload(this)">
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+        <div class="conditional" id="logo-upload-section">
+          <label for="logo-format">Formato del logo</label>
+          <select id="logo-format" style="margin-bottom:10px">
+            <option value="">Seleccioná el formato</option>
+            <option value="svg">SVG (vectorial — ideal)</option>
+            <option value="png">PNG con fondo transparente</option>
+            <option value="jpg">JPG / JPEG</option>
+            <option value="ai">Adobe Illustrator (.ai)</option>
+            <option value="pdf">PDF</option>
+          </select>
+          <div class="file-drop" id="logo-drop" onclick="document.getElementById('logo-file').click()" ondragover="handleDragOver(event,this)" ondragleave="handleDragLeave(event,this)" ondrop="handleDrop(event,this,'logo')">
+            <div class="file-drop-icon">🖼️</div>
+            <div class="file-drop-title">Arrastrá tu logo aquí</div>
+            <div class="file-drop-hint">o hacé clic para seleccionar — PNG, SVG, JPG</div>
+            <input type="file" id="logo-file" accept=".png,.svg,.jpg,.jpeg,.ai,.pdf" onchange="handleFileSelect(event,'logo')">
+          </div>
+          <div class="file-list" id="logo-file-list"></div>
+        </div>
+      </div>
+
+      <hr class="section-divider">
+
+      <div class="field">
+        <label>Calidad de fotos disponibles<span class="required">*</span></label>
+        <div class="option-cards cols-2" id="photo-group">
+          <div class="option-card selected" data-value="professional" onclick="selectOptionCard('photo-group',this,'professional','photo-quality')">
+            <div class="option-card-dot"></div>
+            <div class="option-card-body">
+              <div class="option-card-label">📷 Fotos profesionales</div>
+              <div class="option-card-desc">Sesión fotográfica con fotógrafo</div>
+            </div>
+          </div>
+          <div class="option-card" data-value="phone" onclick="selectOptionCard('photo-group',this,'phone','photo-quality')">
+            <div class="option-card-dot"></div>
+            <div class="option-card-body">
+              <div class="option-card-label">📱 Fotos de celular</div>
+              <div class="option-card-desc">Fotos propias con buen encuadre</div>
+            </div>
+          </div>
+          <div class="option-card" data-value="supplier" onclick="selectOptionCard('photo-group',this,'supplier','photo-quality')">
+            <div class="option-card-dot"></div>
+            <div class="option-card-body">
+              <div class="option-card-label">📦 Fotos del proveedor</div>
+              <div class="option-card-desc">Imágenes provistas por el fabricante</div>
+            </div>
+          </div>
+          <div class="option-card" data-value="none" onclick="selectOptionCard('photo-group',this,'none','photo-quality')">
+            <div class="option-card-dot"></div>
+            <div class="option-card-body">
+              <div class="option-card-label">🚫 Sin fotos aún</div>
+              <div class="option-card-desc">Usaremos placeholders por ahora</div>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="photo-quality" value="professional">
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       STEP 5 — CATÁLOGO
+  ══════════════════════════════════════════ -->
+  <div class="step" id="step-5">
+    <div class="card">
+      <div class="card-title">Catálogo</div>
+      <div class="card-subtitle">Tus productos o servicios</div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="initial-count">Cantidad inicial de productos<span class="required">*</span></label>
+          <input type="number" id="initial-count" min="1" placeholder="Ej: 20">
+          <div class="field-error" id="initial-count-error">Ingresá al menos 1</div>
+        </div>
+        <div class="field">
+          <label>Tipo de producto<span class="required">*</span></label>
+          <select id="catalog-type">
+            <option value="physical">Físico</option>
+            <option value="digital">Digital</option>
+            <option value="service">Servicio</option>
+            <option value="mixed">Mixto</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Categorías <span class="hint">Escribí y presioná Enter para agregar</span></label>
+        <div class="tag-input-wrap" onclick="document.getElementById('categories-input').focus()">
+          <div id="categories-chips"></div>
+          <input type="text" id="categories-input" class="tag-input-field" placeholder="Ej: Remeras, Pantalones, Accesorios..." onkeydown="handleTagInput(event,'categories-chips','categories-data')">
+        </div>
+        <input type="hidden" id="categories-data" value="[]">
+      </div>
+
+      <div class="field">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-name">¿Tus productos tienen variantes?</div>
+            <div class="toggle-hint">Talle, color, tamaño, etc.</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="has-variants">
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Rango de precios</label>
+        <div class="price-range">
+          <span>Desde $</span>
+          <input type="text" id="price-from" placeholder="500" style="width:120px">
+          <span>Hasta $</span>
+          <input type="text" id="price-to" placeholder="5.000" style="width:120px">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       STEP 6 — PÁGINAS
+  ══════════════════════════════════════════ -->
+  <div class="step" id="step-6">
+    <div class="card">
+      <div class="card-title">Páginas del Sitio</div>
+      <div class="card-subtitle">Marcá las secciones que necesitás</div>
+
+      <div class="checkbox-grid">
+        <label class="checkbox-item">
+          <input type="checkbox" id="page-about">
+          <div class="checkbox-box"></div>
+          <div>
+            <div class="checkbox-label">Sobre nosotros</div>
+            <div class="checkbox-desc">Historia, equipo y valores</div>
+          </div>
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="page-faq">
+          <div class="checkbox-box"></div>
+          <div>
+            <div class="checkbox-label">FAQ</div>
+            <div class="checkbox-desc">Preguntas frecuentes</div>
+          </div>
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="page-contact">
+          <div class="checkbox-box"></div>
+          <div>
+            <div class="checkbox-label">Contacto con formulario</div>
+            <div class="checkbox-desc">Página de contacto dedicada</div>
+          </div>
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="page-legal">
+          <div class="checkbox-box"></div>
+          <div>
+            <div class="checkbox-label">Términos y privacidad</div>
+            <div class="checkbox-desc">Legales, devoluciones, políticas</div>
+          </div>
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="page-blog">
+          <div class="checkbox-box"></div>
+          <div>
+            <div class="checkbox-label">Blog / Novedades</div>
+            <div class="checkbox-desc">Artículos, noticias y contenido</div>
+          </div>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       STEP 7 — CONTACTO Y REDES
+  ══════════════════════════════════════════ -->
+  <div class="step" id="step-7">
+    <div class="card">
+      <div class="card-title">Contacto y Redes Sociales</div>
+      <div class="card-subtitle">Dónde encontrarte</div>
+
+      <div class="field">
+        <label for="contact-wa">WhatsApp</label>
+        <div class="phone-wrap">
+          <div class="phone-prefix"><span class="phone-flag">🇦🇷</span> +54</div>
+          <input type="tel" id="contact-wa" placeholder="11 1234-5678">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="contact-email">Email público</label>
+        <input type="email" id="contact-email" placeholder="hola@tunegocio.com">
+      </div>
+
+      <hr class="section-divider">
+
+      <div class="field">
+        <label>Redes sociales</label>
+        <div id="socials-container">
+          <!-- rows added by JS -->
+        </div>
+        <button class="add-btn" onclick="addSocialRow()" type="button">
+          + Agregar red social
+        </button>
+      </div>
+
+      <div class="field conditional" id="primary-social-field">
+        <label for="primary-social">Red social principal</label>
+        <select id="primary-social">
+          <option value="">Seleccioná la red principal</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       STEP 8 — ASSETS
+  ══════════════════════════════════════════ -->
+  <div class="step" id="step-8">
+    <div class="card">
+      <div class="card-title">Assets del Cliente</div>
+      <div class="card-subtitle">Archivos e imágenes para el sitio</div>
+
+      <div class="info-card">
+        <div class="info-card-title">📁 Estructura de carpetas esperada</div>
+        <pre>_assets-cliente/
+  logo/       ← PNG, SVG (fondo transparente)
+  hero/       ← Mínimo 1200px, JPG/WebP
+  productos/  ← Mínimo 800px por producto
+  marca/      ← Fotos de equipo, local, procesos
+  galeria/    ← Imágenes adicionales</pre>
+        <div class="info-card-note">
+          Nombres en minúsculas con guiones. JPG/WebP para fotos, PNG/SVG para logo.
+        </div>
+      </div>
+
+      <div class="field">
+        <label>¿Qué tenés disponible ahora?</label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="asset-logo">
+          <div class="checkbox-box"></div>
+          <div><div class="checkbox-label">Logo (ya subido en paso 4)</div></div>
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="asset-hero">
+          <div class="checkbox-box"></div>
+          <div>
+            <div class="checkbox-label">Fotos hero / banner principal</div>
+            <div class="checkbox-desc">Imagen principal del sitio, mínimo 1200px de ancho</div>
+          </div>
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="asset-productos">
+          <div class="checkbox-box"></div>
+          <div>
+            <div class="checkbox-label">Fotos de productos</div>
+            <div class="checkbox-desc">Una foto por producto mínimo, mínimo 800px</div>
+          </div>
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="asset-marca">
+          <div class="checkbox-box"></div>
+          <div>
+            <div class="checkbox-label">Fotos de marca / equipo</div>
+            <div class="checkbox-desc">Imágenes de tu local, proceso de trabajo, equipo</div>
+          </div>
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="asset-galeria">
+          <div class="checkbox-box"></div>
+          <div><div class="checkbox-label">Galería adicional</div></div>
+        </label>
+      </div>
+
+      <hr class="section-divider">
+
+      <div class="field">
+        <label>Subir archivos</label>
+        <div class="file-drop" id="assets-drop"
+          onclick="document.getElementById('assets-file').click()"
+          ondragover="handleDragOver(event,this)"
+          ondragleave="handleDragLeave(event,this)"
+          ondrop="handleDrop(event,this,'assets')">
+          <div class="file-drop-icon">📂</div>
+          <div class="file-drop-title">Arrastrá los archivos aquí</div>
+          <div class="file-drop-hint">Imágenes — JPG, PNG, WebP, SVG</div>
+          <input type="file" id="assets-file" accept="image/*,.svg" multiple onchange="handleFileSelect(event,'assets')">
+        </div>
+        <div class="file-list" id="assets-file-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       STEP 9 — ANIMACIONES
+  ══════════════════════════════════════════ -->
+  <div class="step" id="step-9">
+    <div class="card">
+      <div class="card-title">Animaciones</div>
+      <div class="card-subtitle">¿Cuánto movimiento querés en el sitio?</div>
+
+      <div class="option-cards" id="animations-group">
+        <div class="option-card" data-value="none" onclick="selectOptionCard('animations-group',this,'none','animations-level')">
+          <div class="option-card-dot"></div>
+          <div class="option-card-body">
+            <div class="option-card-label">Sin animaciones</div>
+            <div class="option-card-desc">Solo CSS estático. Máxima velocidad y simplicidad. Ideal para catálogos industriales o profesionales.</div>
+          </div>
+        </div>
+        <div class="option-card selected" data-value="subtle" onclick="selectOptionCard('animations-group',this,'subtle','animations-level')">
+          <div class="option-card-dot"></div>
+          <div class="option-card-body">
+            <div class="option-card-label">Pocas y sutiles <span class="badge badge-green">Recomendado</span></div>
+            <div class="option-card-desc">Fade-in al hacer scroll, hover effects, transiciones suaves. Perfecto para la mayoría de los rubros.</div>
+          </div>
+        </div>
+        <div class="option-card" data-value="full" onclick="selectOptionCard('animations-group',this,'full','animations-level')">
+          <div class="option-card-dot"></div>
+          <div class="option-card-body">
+            <div class="option-card-label">Muchas animaciones</div>
+            <div class="option-card-desc">Hero animado, transiciones entre páginas, elementos que aparecen con movimiento. Ideal para marcas creativas.</div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="animations-level" value="subtle">
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       STEP 10 — REVISIÓN Y ENVÍO
+  ══════════════════════════════════════════ -->
+  <div class="step" id="step-10">
+    <div class="card">
+      <div class="card-title">Revisión Final</div>
+      <div class="card-subtitle">Revisá los datos antes de generar el intake</div>
+
+      <div id="summary-content">
+        <!-- generated by JS -->
+      </div>
+
+      <hr class="section-divider">
+
+      <button class="submit-btn" id="submit-btn" onclick="submitForm()">
+        Generar Intake ✓
+      </button>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- SUCCESS SCREEN -->
+<div id="success-screen">
+  <div class="success-icon">✅</div>
+  <div class="success-title">¡Briefing enviado!</div>
+  <div class="success-sub">
+    El intake fue generado correctamente.<br>
+    Podés cerrar esta ventana y continuar con el agente.
+  </div>
+  <div style="background:var(--white);border-radius:var(--radius-card);padding:20px;box-shadow:var(--shadow);text-align:left">
+    <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);margin-bottom:8px">Archivos generados</div>
+    <div style="font-size:0.85rem;color:var(--dark);font-family:monospace;line-height:2">.sitiohoy/intake.json<br>sitiohoy.config.json</div>
+  </div>
+</div>
+
+<!-- NAVIGATION BAR -->
+<div class="nav-bar" id="nav-bar">
+  <div class="nav-inner">
+    <button class="btn btn-secondary" id="btn-prev" onclick="prevStep()" style="visibility:hidden">
+      ← Anterior
+    </button>
+    <button class="btn btn-primary" id="btn-next" onclick="nextStep()">
+      Siguiente →
+    </button>
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+const state = {
+  currentStep: 1,
+  totalSteps: 10,
+  plan: 'esencial',
+  shipping: 'correo',
+  domainStatus: 'owned',
+  uploadedFiles: { logo: [], assets: [] },
+  categories: [],
+  socials: [],
+  visualStyle: '',
+  animationsLevel: 'subtle',
+  tone: 'cercano',
+  primaryDevice: 'mobile',
+  photoQuality: 'professional',
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  buildProgressDots()
+  updateUI()
+  // Initialize color hex fields
+  syncColorHex(document.getElementById('color-primary'), 'color-primary-hex')
+  syncColorHex(document.getElementById('color-secondary'), 'color-secondary-hex')
+  syncColorHex(document.getElementById('color-accent'), 'color-accent-hex')
+  // Set accent to empty (undefined colors)
+  document.getElementById('color-accent-hex').value = ''
+  document.getElementById('color-secondary-hex').value = ''
+  document.getElementById('color-primary-hex').value = ''
+})
+
+function buildProgressDots() {
+  const wrap = document.getElementById('progress-dots')
+  wrap.innerHTML = ''
+  const labels = ['Plan','Negocio','Cliente','Visual','Catálogo','Páginas','Contacto','Assets','Animaciones','Envío']
+  for (let i = 1; i <= state.totalSteps; i++) {
+    const dot = document.createElement('div')
+    dot.className = 'progress-dot' + (i <= state.currentStep ? ' active' : '')
+    dot.id = `dot-${i}`
+    dot.title = labels[i-1]
+    wrap.appendChild(dot)
+  }
+}
+
+function updateUI() {
+  // Steps
+  document.querySelectorAll('.step').forEach((el, i) => {
+    el.classList.toggle('active', i + 1 === state.currentStep)
+  })
+  // Progress
+  for (let i = 1; i <= state.totalSteps; i++) {
+    const dot = document.getElementById(`dot-${i}`)
+    if (dot) dot.classList.toggle('active', i <= state.currentStep)
+  }
+  // Step indicator
+  document.getElementById('step-indicator').textContent = `Paso ${state.currentStep} de ${state.totalSteps}`
+  // Nav buttons
+  const prev = document.getElementById('btn-prev')
+  const next = document.getElementById('btn-next')
+  prev.style.visibility = state.currentStep === 1 ? 'hidden' : 'visible'
+  if (state.currentStep === state.totalSteps) {
+    next.style.display = 'none'
+  } else {
+    next.style.display = 'inline-flex'
+    next.textContent = 'Siguiente →'
+  }
+  // Summary on last step
+  if (state.currentStep === state.totalSteps) buildSummary()
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────────────────────
+function nextStep() {
+  if (!validateStep(state.currentStep)) return
+  if (state.currentStep < state.totalSteps) {
+    state.currentStep++
+    updateUI()
+    scrollToTop()
+  }
+}
+
+function prevStep() {
+  if (state.currentStep > 1) {
+    state.currentStep--
+    updateUI()
+    scrollToTop()
+  }
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+// ── VALIDATION ─────────────────────────────────────────────────────────────
+function validateStep(step) {
+  let valid = true
+  if (step === 1) {
+    if (!state.plan) { showError('plan-error'); valid = false }
+  }
+  if (step === 2) {
+    const name = document.getElementById('business-name').value.trim()
+    const industry = document.getElementById('business-industry').value.trim()
+    const desc = document.getElementById('business-desc').value.trim()
+    if (!name) { markInvalid('business-name', 'business-name-error'); valid = false }
+    else clearInvalid('business-name', 'business-name-error')
+    if (!industry) { markInvalid('business-industry', 'business-industry-error'); valid = false }
+    else clearInvalid('business-industry', 'business-industry-error')
+    if (!desc) { markInvalid('business-desc', 'business-desc-error'); valid = false }
+    else clearInvalid('business-desc', 'business-desc-error')
+  }
+  if (step === 5) {
+    const count = document.getElementById('initial-count').value
+    if (!count || parseInt(count) < 1) { markInvalid('initial-count', 'initial-count-error'); valid = false }
+    else clearInvalid('initial-count', 'initial-count-error')
+  }
+  return valid
+}
+
+function markInvalid(fieldId, errorId) {
+  document.getElementById(fieldId).classList.add('invalid')
+  showError(errorId)
+}
+function clearInvalid(fieldId, errorId) {
+  document.getElementById(fieldId).classList.remove('invalid')
+  hideError(errorId)
+}
+function showError(id) {
+  const el = document.getElementById(id)
+  if (el) el.classList.add('visible')
+}
+function hideError(id) {
+  const el = document.getElementById(id)
+  if (el) el.classList.remove('visible')
+}
+
+// ── PLAN SELECTION ─────────────────────────────────────────────────────────
+function selectPlan(card, plan) {
+  document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'))
+  card.classList.add('selected')
+  state.plan = plan
+  hideError('plan-error')
+
+  // Shipping — only empresa
+  const shippingSection = document.getElementById('shipping-section')
+  shippingSection.classList.toggle('visible', plan === 'empresa')
+
+  // MercadoPago — not esencial
+  const mpSection = document.getElementById('mp-section')
+  mpSection.classList.toggle('visible', plan !== 'esencial')
+}
+
+// ── RADIO HELPERS ──────────────────────────────────────────────────────────
+function selectRadio(groupId, value) {
+  const group = document.getElementById(groupId + '-group')
+  if (!group) return
+  group.querySelectorAll('.radio-item').forEach(item => {
+    const input = item.querySelector('input[type=radio]')
+    const match = input && input.value === value
+    item.classList.toggle('selected', match)
+  })
+  if (groupId === 'shipping') state.shipping = value
+  if (groupId === 'domain') {
+    state.domainStatus = value
+    toggleDomainInput(value)
+  }
+}
+
+function toggleDomainInput(status) {
+  const wrap = document.getElementById('domain-input-wrap')
+  wrap.classList.toggle('visible', status === 'owned')
+}
+
+// ── OPTION CARDS ───────────────────────────────────────────────────────────
+function selectOptionCard(groupId, card, value, hiddenId) {
+  const group = document.getElementById(groupId)
+  group.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'))
+  card.classList.add('selected')
+  document.getElementById(hiddenId).value = value
+  // update state
+  if (hiddenId === 'audience-tone') state.tone = value
+  if (hiddenId === 'primary-device') state.primaryDevice = value
+  if (hiddenId === 'photo-quality') state.photoQuality = value
+  if (hiddenId === 'animations-level') state.animationsLevel = value
+}
+
+// ── TAG CHIPS (style selector) ─────────────────────────────────────────────
+function toggleTagChip(chip, hiddenId) {
+  chip.classList.toggle('selected')
+  const selector = chip.closest('.tag-selector')
+  const selected = [...selector.querySelectorAll('.tag-chip.selected')].map(c => c.dataset.value)
+  document.getElementById(hiddenId).value = selected.join(',')
+  state.visualStyle = selected.join(',')
+}
+
+// ── TAG INPUT (categories) ─────────────────────────────────────────────────
+function handleTagInput(event, chipsId, dataId) {
+  if (event.key === 'Enter' || event.key === ',') {
+    event.preventDefault()
+    const input = event.target
+    const val = input.value.trim().replace(/,$/, '')
+    if (!val) return
+    state.categories.push(val)
+    input.value = ''
+    renderTagChips(chipsId, dataId)
+  }
+  if (event.key === 'Backspace' && event.target.value === '' && state.categories.length) {
+    state.categories.pop()
+    renderTagChips(chipsId, dataId)
+  }
+}
+
+function renderTagChips(chipsId, dataId) {
+  const wrap = document.getElementById(chipsId)
+  wrap.innerHTML = ''
+  state.categories.forEach((cat, i) => {
+    const chip = document.createElement('div')
+    chip.className = 'tag-input-chip'
+    chip.innerHTML = `${escHtml(cat)}<button type="button" onclick="removeCategory(${i},'${chipsId}','${dataId}')">×</button>`
+    wrap.appendChild(chip)
+  })
+  document.getElementById(dataId).value = JSON.stringify(state.categories)
+}
+
+function removeCategory(i, chipsId, dataId) {
+  state.categories.splice(i, 1)
+  renderTagChips(chipsId, dataId)
+}
+
+// ── SOCIAL ROWS ────────────────────────────────────────────────────────────
+let socialRowId = 0
+function addSocialRow() {
+  const id = socialRowId++
+  state.socials.push({ id, network: 'instagram', url: '' })
+  renderSocialRows()
+}
+
+function removeSocialRow(id) {
+  state.socials = state.socials.filter(s => s.id !== id)
+  renderSocialRows()
+}
+
+function renderSocialRows() {
+  const container = document.getElementById('socials-container')
+  container.innerHTML = ''
+  state.socials.forEach(s => {
+    const row = document.createElement('div')
+    row.className = 'social-row'
+    row.innerHTML = `
+      <select onchange="updateSocial(${s.id},'network',this.value)">
+        <option value="instagram" ${s.network==='instagram'?'selected':''}>Instagram</option>
+        <option value="tiktok" ${s.network==='tiktok'?'selected':''}>TikTok</option>
+        <option value="facebook" ${s.network==='facebook'?'selected':''}>Facebook</option>
+        <option value="youtube" ${s.network==='youtube'?'selected':''}>YouTube</option>
+        <option value="pinterest" ${s.network==='pinterest'?'selected':''}>Pinterest</option>
+        <option value="linkedin" ${s.network==='linkedin'?'selected':''}>LinkedIn</option>
+        <option value="otra" ${s.network==='otra'?'selected':''}>Otra</option>
+      </select>
+      <input type="url" placeholder="https://..." value="${escHtml(s.url)}" onchange="updateSocial(${s.id},'url',this.value)">
+      <button type="button" onclick="removeSocialRow(${s.id})" title="Eliminar">✕</button>
+    `
+    container.appendChild(row)
+  })
+  updatePrimarySocial()
+}
+
+function updateSocial(id, field, value) {
+  const s = state.socials.find(x => x.id === id)
+  if (s) { s[field] = value; updatePrimarySocial() }
+}
+
+function updatePrimarySocial() {
+  const field = document.getElementById('primary-social-field')
+  const sel = document.getElementById('primary-social')
+  field.classList.toggle('visible', state.socials.length > 0)
+  const current = sel.value
+  sel.innerHTML = '<option value="">Seleccioná la red principal</option>'
+  state.socials.forEach(s => {
+    const opt = document.createElement('option')
+    opt.value = s.network
+    opt.textContent = s.network.charAt(0).toUpperCase() + s.network.slice(1)
+    if (s.network === current) opt.selected = true
+    sel.appendChild(opt)
+  })
+}
+
+// ── COLOR SYNC ─────────────────────────────────────────────────────────────
+function syncColorHex(picker, hexId) {
+  document.getElementById(hexId).value = picker.value
+}
+
+function syncColorPicker(hexInput, pickerId) {
+  const val = hexInput.value.trim()
+  if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+    document.getElementById(pickerId).value = val
+  }
+}
+
+// ── CHAR COUNTER ───────────────────────────────────────────────────────────
+function updateCounter(textarea, counterId) {
+  const max = parseInt(textarea.getAttribute('maxlength') || '300')
+  const len = textarea.value.length
+  const el = document.getElementById(counterId)
+  el.textContent = `${len} / ${max}`
+  el.classList.toggle('warn', len > max * 0.9)
+}
+
+// ── LOGO UPLOAD TOGGLE ─────────────────────────────────────────────────────
+function toggleLogoUpload(toggle) {
+  const section = document.getElementById('logo-upload-section')
+  section.classList.toggle('visible', toggle.checked)
+}
+
+// ── FILE HANDLING ──────────────────────────────────────────────────────────
+function handleDragOver(e, el) {
+  e.preventDefault()
+  el.classList.add('dragover')
+}
+function handleDragLeave(e, el) {
+  el.classList.remove('dragover')
+}
+function handleDrop(e, el, bucket) {
+  e.preventDefault()
+  el.classList.remove('dragover')
+  const files = [...e.dataTransfer.files]
+  files.forEach(f => addFile(f, bucket))
+  renderFileList(bucket)
+}
+function handleFileSelect(e, bucket) {
+  const files = [...e.target.files]
+  files.forEach(f => addFile(f, bucket))
+  renderFileList(bucket)
+  e.target.value = ''
+}
+function addFile(file, bucket) {
+  if (!state.uploadedFiles[bucket]) state.uploadedFiles[bucket] = []
+  state.uploadedFiles[bucket].push({ file, folder: guessFolder(file.name) })
+}
+function guessFolder(name) {
+  const lower = name.toLowerCase()
+  if (lower.includes('logo')) return 'logo'
+  if (lower.includes('hero') || lower.includes('banner')) return 'hero'
+  if (lower.includes('prod')) return 'productos'
+  if (lower.includes('marca') || lower.includes('equipo') || lower.includes('team')) return 'marca'
+  return 'galeria'
+}
+function removeFile(bucket, index) {
+  state.uploadedFiles[bucket].splice(index, 1)
+  renderFileList(bucket)
+}
+function renderFileList(bucket) {
+  const listId = bucket === 'logo' ? 'logo-file-list' : 'assets-file-list'
+  const list = document.getElementById(listId)
+  if (!list) return
+  list.innerHTML = ''
+  ;(state.uploadedFiles[bucket] || []).forEach((item, i) => {
+    const el = document.createElement('div')
+    el.className = 'file-item'
+    el.innerHTML = `
+      <div class="file-item-name" title="${escHtml(item.file.name)}">${escHtml(item.file.name)}</div>
+      <select onchange="state.uploadedFiles['${bucket}'][${i}].folder=this.value">
+        <option value="logo" ${item.folder==='logo'?'selected':''}>logo/</option>
+        <option value="hero" ${item.folder==='hero'?'selected':''}>hero/</option>
+        <option value="productos" ${item.folder==='productos'?'selected':''}>productos/</option>
+        <option value="marca" ${item.folder==='marca'?'selected':''}>marca/</option>
+        <option value="galeria" ${item.folder==='galeria'?'selected':''}>galeria/</option>
+      </select>
+      <button type="button" onclick="removeFile('${bucket}',${i})" title="Quitar">✕</button>
+    `
+    list.appendChild(el)
+  })
+}
+
+// ── SUMMARY ────────────────────────────────────────────────────────────────
+function buildSummary() {
+  const container = document.getElementById('summary-content')
+  const v = gatherFormData()
+  const sections = [
+    {
+      title: 'Plan y Configuración',
+      rows: [
+        ['Plan', v.plan],
+        ['Envíos', v.plan === 'empresa' ? v.shipping : '—'],
+        ['MercadoPago', v.plan !== 'esencial' ? (v.mercadoPagoActive ? 'Sí' : 'No') : '—'],
+        ['Emails automáticos (Resend)', v.resendRequested ? 'Sí' : 'No'],
+        ['Dominio', v.domain.status === 'owned' ? (v.domain.value || 'definido') : 'por comprar'],
+        ['Editor / IA', v.editor || '—'],
+        ['MCP Supabase', v.supabaseMcp ? 'Sí' : 'No'],
+        ['MCP AIDesigner', v.aiDesignerMcp ? 'Sí' : 'No'],
+      ]
+    },
+    {
+      title: 'Negocio',
+      rows: [
+        ['Nombre', v.businessName || '—'],
+        ['Rubro', v.industry || '—'],
+        ['Descripción', v.description || '—'],
+        ['Diferencial', v.differentiator || '—'],
+        ['Referentes', v.visualRefs || '—'],
+      ]
+    },
+    {
+      title: 'Audiencia',
+      rows: [
+        ['Tono', v.tone || '—'],
+        ['Dispositivo principal', v.primaryDevice || '—'],
+        ['Sensación deseada', v.desiredFeeling || '—'],
+      ]
+    },
+    {
+      title: 'Identidad Visual',
+      rows: [
+        ['Color primario', v.colorPrimary || '—'],
+        ['Color secundario', v.colorSecondary || '—'],
+        ['Color acento', v.colorAccent || '—'],
+        ['Estilo', v.visualStyle || '—'],
+        ['Logo disponible', v.logoAvailable ? 'Sí (' + (v.logoFormat || '?') + ')' : 'No'],
+        ['Calidad de fotos', v.photoQuality || '—'],
+      ]
+    },
+    {
+      title: 'Catálogo',
+      rows: [
+        ['Cantidad inicial', v.initialCount || '—'],
+        ['Tipo', v.catalogType || '—'],
+        ['Categorías', v.categories.join(', ') || '—'],
+        ['Variantes', v.hasVariants ? 'Sí' : 'No'],
+        ['Rango de precios', (v.priceFrom || v.priceTo) ? `$${v.priceFrom} — $${v.priceTo}` : '—'],
+      ]
+    },
+    {
+      title: 'Páginas',
+      rows: [
+        ['Sobre nosotros', v.pages.about ? 'Sí' : 'No'],
+        ['FAQ', v.pages.faq ? 'Sí' : 'No'],
+        ['Contacto', v.pages.contact ? 'Sí' : 'No'],
+        ['Legales', v.pages.legal ? 'Sí' : 'No'],
+        ['Blog', v.pages.blog ? 'Sí' : 'No'],
+      ]
+    },
+    {
+      title: 'Contacto',
+      rows: [
+        ['WhatsApp', v.whatsapp ? '+54 ' + v.whatsapp : '—'],
+        ['Email', v.email || '—'],
+        ['Redes', v.socials.map(s => s.network).join(', ') || '—'],
+        ['Red principal', v.primarySocial || '—'],
+      ]
+    },
+    {
+      title: 'Animaciones',
+      rows: [['Nivel', v.animationsLevel || '—']]
+    },
+  ]
+
+  container.innerHTML = sections.map(section => `
+    <div class="summary-section">
+      <div class="summary-section-title">${section.title}</div>
+      ${section.rows.map(([k, val]) => `
+        <div class="summary-row">
+          <span class="summary-key">${k}</span>
+          <span class="summary-val">${escHtml(String(val))}</span>
+        </div>
+      `).join('')}
+    </div>
+  `).join('')
+}
+
+// ── GATHER DATA ────────────────────────────────────────────────────────────
+function gatherFormData() {
+  const shippingVal = getSelectedRadio('shipping')
+  return {
+    plan: state.plan,
+    shipping: shippingVal,
+    mercadoPagoActive: document.getElementById('mp-active').checked,
+    resendRequested: document.getElementById('resend-check').checked,
+    domain: {
+      status: getSelectedRadio('domain-status') || 'owned',
+      value: document.getElementById('domain-value').value.trim(),
+    },
+    editor: document.getElementById('editor-select').value,
+    supabaseMcp: document.getElementById('supabase-mcp').checked,
+    aiDesignerMcp: document.getElementById('aidesigner-mcp').checked,
+    businessName: document.getElementById('business-name').value.trim(),
+    industry: document.getElementById('business-industry').value.trim(),
+    description: document.getElementById('business-desc').value.trim(),
+    differentiator: document.getElementById('business-diff').value.trim(),
+    visualRefs: document.getElementById('visual-refs').value.trim(),
+    audienceProfile: document.getElementById('audience-profile').value.trim(),
+    audienceProblem: document.getElementById('audience-problem').value.trim(),
+    desiredFeeling: document.getElementById('audience-feeling').value.trim(),
+    tone: document.getElementById('audience-tone').value,
+    primaryDevice: document.getElementById('primary-device').value,
+    colorPrimary: document.getElementById('color-primary-hex').value.trim(),
+    colorSecondary: document.getElementById('color-secondary-hex').value.trim(),
+    colorAccent: document.getElementById('color-accent-hex').value.trim(),
+    desiredMood: document.getElementById('desired-mood').value.trim(),
+    visualStyle: document.getElementById('visual-style').value,
+    logoAvailable: document.getElementById('logo-toggle').checked,
+    logoFormat: document.getElementById('logo-format').value,
+    photoQuality: document.getElementById('photo-quality').value,
+    initialCount: parseInt(document.getElementById('initial-count').value) || 0,
+    catalogType: document.getElementById('catalog-type').value,
+    categories: state.categories,
+    hasVariants: document.getElementById('has-variants').checked,
+    priceFrom: document.getElementById('price-from').value.trim(),
+    priceTo: document.getElementById('price-to').value.trim(),
+    pages: {
+      about: document.getElementById('page-about').checked,
+      faq: document.getElementById('page-faq').checked,
+      contact: document.getElementById('page-contact').checked,
+      legal: document.getElementById('page-legal').checked,
+      blog: document.getElementById('page-blog').checked,
+    },
+    whatsapp: document.getElementById('contact-wa').value.trim(),
+    email: document.getElementById('contact-email').value.trim(),
+    socials: state.socials.map(s => ({ network: s.network, url: s.url })),
+    primarySocial: document.getElementById('primary-social').value,
+    assets: {
+      folderReady: [
+        document.getElementById('asset-logo').checked,
+        document.getElementById('asset-hero').checked,
+        document.getElementById('asset-productos').checked,
+        document.getElementById('asset-marca').checked,
+        document.getElementById('asset-galeria').checked,
+      ].some(Boolean),
+      logo: document.getElementById('asset-logo').checked,
+      hero: document.getElementById('asset-hero').checked,
+      productos: document.getElementById('asset-productos').checked,
+      marca: document.getElementById('asset-marca').checked,
+      galeria: document.getElementById('asset-galeria').checked,
+    },
+    animationsLevel: document.getElementById('animations-level').value,
+  }
+}
+
+// ── BUILD INTAKE JSON ──────────────────────────────────────────────────────
+function buildIntakeJson(v) {
+  const slugify = s => String(s||'').normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'').toLowerCase()
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')
+
+  const shippingVal = v.shipping || ''
+  const correoRequested = shippingVal === 'correo'
+  const enviaRequested = shippingVal === 'envia'
+
+  const missing = []
+  if (!v.assets.logo) missing.push('logo')
+  if (!v.assets.hero) missing.push('hero')
+  if (!v.assets.productos) missing.push('productos')
+
+  return {
+    business: {
+      name: v.businessName,
+      slug: slugify(v.businessName),
+      industry: v.industry,
+      description: v.description,
+      differentiator: v.differentiator,
+      visualReferences: v.visualRefs ? v.visualRefs.split(',').map(s=>s.trim()).filter(Boolean) : [],
+    },
+    plan: v.plan,
+    technical: {
+      mercadoPagoActive: v.mercadoPagoActive,
+      correoArgentinoRequested: correoRequested,
+      enviaRequested: enviaRequested,
+      resendRequested: v.resendRequested,
+      domain: v.domain,
+      editor: v.editor || 'other',
+      supabaseMcp: v.supabaseMcp,
+      aiDesignerMcp: v.aiDesignerMcp,
+    },
+    audience: {
+      profile: v.audienceProfile,
+      problem: v.audienceProblem,
+      desiredFeeling: v.desiredFeeling,
+      tone: v.tone,
+      primaryDevice: v.primaryDevice,
+    },
+    visualIdentity: {
+      colors: {
+        primary: v.colorPrimary,
+        secondary: v.colorSecondary,
+        accent: v.colorAccent,
+      },
+      desiredMood: v.desiredMood,
+      style: v.visualStyle,
+      logo: {
+        available: v.logoAvailable,
+        format: v.logoFormat,
+      },
+      photoQuality: v.photoQuality,
+    },
+    catalog: {
+      initialCount: v.initialCount,
+      categories: v.categories,
+      hasVariants: v.hasVariants,
+      priceRange: v.priceFrom || v.priceTo ? `$${v.priceFrom} - $${v.priceTo}` : '',
+      type: v.catalogType,
+    },
+    pages: v.pages,
+    contact: {
+      whatsapp: v.whatsapp ? '+54' + v.whatsapp.replace(/\s/g,'') : '',
+      email: v.email,
+      socials: v.socials,
+      primarySocial: v.primarySocial,
+    },
+    assets: {
+      folderReady: v.assets.folderReady,
+      missing: missing,
+    },
+    animations: v.animationsLevel,
+    notes: [],
+  }
+}
+
+// ── SUBMIT ─────────────────────────────────────────────────────────────────
+async function submitForm() {
+  const btn = document.getElementById('submit-btn')
+  btn.disabled = true
+  btn.innerHTML = '<span class="loading-spinner"></span> Generando...'
+
+  const v = gatherFormData()
+  const intakeJson = buildIntakeJson(v)
+
+  // Build FormData with files
+  const formData = new FormData()
+  formData.append('data', JSON.stringify(intakeJson))
+
+  const allFiles = [
+    ...(state.uploadedFiles.logo || []).map(f => ({ ...f, bucket: 'logo' })),
+    ...(state.uploadedFiles.assets || []).map(f => ({ ...f, bucket: 'assets' })),
+  ]
+  allFiles.forEach(({ file, folder }) => {
+    formData.append(folder, file, file.name)
+  })
+
+  try {
+    const res = await fetch('/submit', { method: 'POST', body: formData })
+    const json = await res.json()
+    if (json.ok) {
+      document.getElementById('form-main').style.display = 'none'
+      document.getElementById('nav-bar').style.display = 'none'
+      document.getElementById('success-screen').classList.add('visible')
+      launchConfetti()
+    } else {
+      throw new Error(json.error || 'Error desconocido')
+    }
+  } catch (err) {
+    btn.disabled = false
+    btn.innerHTML = 'Generar Intake ✓'
+    alert('Error al enviar: ' + err.message + '\n\nAsegurate de que el servidor esté corriendo.')
+  }
+}
+
+// ── CONFETTI ───────────────────────────────────────────────────────────────
+function launchConfetti() {
+  const wrap = document.getElementById('confetti-wrap')
+  const colors = ['#10B981','#059669','#34D399','#6EE7B7','#0F172A','#F59E0B','#3B82F6','#EF4444']
+  for (let i = 0; i < 80; i++) {
+    const piece = document.createElement('div')
+    piece.className = 'confetti-piece'
+    const color = colors[Math.floor(Math.random() * colors.length)]
+    const left = Math.random() * 100
+    const delay = Math.random() * 2
+    const duration = 2 + Math.random() * 2
+    const size = 6 + Math.random() * 8
+    piece.style.cssText = `
+      left: ${left}%;
+      width: ${size}px;
+      height: ${size}px;
+      background: ${color};
+      border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+      animation-duration: ${duration}s;
+      animation-delay: ${delay}s;
+    `
+    wrap.appendChild(piece)
+  }
+  setTimeout(() => { wrap.innerHTML = '' }, 5000)
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function getSelectedRadio(name) {
+  const el = document.querySelector(`input[name="${name}"]:checked`)
+  return el ? el.value : ''
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+</script>
+</body>
+</html>

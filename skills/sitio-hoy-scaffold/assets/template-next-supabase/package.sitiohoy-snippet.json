@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "sitiohoy:briefing": "node scripts/briefing-server.mjs",
     "sitiohoy:validate": "node scripts/validate-sitiohoy.mjs",
     "sitiohoy:validate-config": "node scripts/validate-config.mjs",
     "sitiohoy:qa": "node scripts/run-qa.mjs",
