@@ -31,16 +31,18 @@ TOTAL=${#OPTIONS[@]}
 selected=0
 
 read_key() {
-  local key
-  IFS= read -rsn1 key
-  if [[ "$key" == $'\x1b' ]]; then
-    read -rsn2 key
-    case "$key" in
-      '[A') echo "UP" ;;
-      '[B') echo "DOWN" ;;
+  local ch seq
+  IFS= read -rsn1 ch
+  if [[ "$ch" == $'\x1b' ]]; then
+    # Leer 2 bytes en un solo read — fix para Linux donde 1+1 con timeout rompe la ejecución
+    IFS= read -rsn2 -t 0.15 seq 2>/dev/null || seq=""
+    case "$seq" in
+      '[A') printf 'UP'   ;;
+      '[B') printf 'DOWN' ;;
+      *)    printf 'ESC'  ;;
     esac
-  elif [[ "$key" == "" ]]; then
-    echo "ENTER"
+  elif [[ "$ch" == "" ]]; then
+    printf 'ENTER'
   fi
 }
 

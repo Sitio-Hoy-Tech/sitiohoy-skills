@@ -9,6 +9,19 @@ tipo: core — cargar al inicio junto al orquestador
 La skill `sitio-hoy` orquesta el proyecto. Las siguientes skills ejecutan etapas
 con mayor determinismo y menos contexto cargado.
 
+## Ubicación de skills por IA
+
+Las skills se instalan **por proyecto** (no globalmente) en el directorio correspondiente a cada IA:
+
+| IA | Directorio de skills | Archivo de contexto |
+|---|---|---|
+| Claude Code | `.claude/skills/<nombre>/SKILL.md` | `CLAUDE.md` |
+| OpenAI Codex | `.agents/skills/<nombre>/SKILL.md` | `AGENTS.md` |
+| OpenCode | `.opencode/skills/<nombre>/SKILL.md` | `AGENTS.md` |
+
+Para invocar una skill en cualquier IA que no soporte delegación automática:
+leer directamente el archivo `SKILL.md` de la skill y seguir su Workflow.
+
 ## Orden recomendado
 
 1. `sitio-hoy-briefing`
