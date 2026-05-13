@@ -75,24 +75,7 @@ printf "  %s📁 Destino:%s %s%s%s\n\n" "$GY" "$RS" "$BD" "$TARGET_DIR" "$RS"
 # FIX Linux: leer la secuencia de escape en un solo read de 2 bytes
 # en lugar de dos reads separados con timeout, que en algunos sistemas
 # Linux corta la ejecución al presionar flechas.
-read_key() {
-  local ch seq
-  IFS= read -rsn1 ch
-  if [[ "$ch" == $'\x1b' ]]; then
-    # Leer los 2 bytes siguientes de la secuencia ANSI en un solo read
-    # -t 0.15 evita bloqueo si fue un ESC solo (sin secuencia)
-    IFS= read -rsn2 -t 0.15 seq 2>/dev/null || seq=""
-    case "$seq" in
-      '[A') printf 'UP'    ;;
-      '[B') printf 'DOWN'  ;;
-      *)    printf 'ESC'   ;;
-    esac
-  elif [[ "$ch" == "" ]]; then
-    printf 'ENTER'
-  fi
-}
-
-# ── Menú genérico ─────────────────────────────────────────────────────────────
+# ── Menú por número ───────────────────────────────────────────────────────────
 # Uso: run_menu "Título" item1 item2 ...
 # Devuelve el índice en MENU_RESULT
 MENU_RESULT=0
@@ -100,38 +83,27 @@ run_menu() {
   local title="$1"; shift
   local options=("$@")
   local total=${#options[@]}
-  local cur=0
 
-  draw() {
-    printf "  %s╭─────────────────────────────────────╮%s\n" "$CY" "$RS"
-    printf "  %s│%s  %-37s%s│%s\n" "$CY" "$RS" "$title" "$CY" "$RS"
-    printf "  %s├─────────────────────────────────────┤%s\n" "$CY" "$RS"
-    for i in "${!options[@]}"; do
-      if [ "$i" -eq "$cur" ]; then
-        printf "  %s│%s  %s❯ %-34s%s%s│%s\n" "$CY" "$RS" "$HL" "${options[$i]}" "$RS" "$CY" "$RS"
-      else
-        printf "  %s│%s  %s● %-34s%s%s│%s\n" "$CY" "$RS" "$NM" "${options[$i]}" "$RS" "$CY" "$RS"
-      fi
-    done
-    printf "  %s╰─────────────────────────────────────╯%s\n" "$CY" "$RS"
-    printf "  %s↑↓ mover · Enter confirmar%s\n\n" "$GY" "$RS"
-  }
-
-  local lines=$((total + 6))
-  printf '\033[?25l'
-  draw
-  while true; do
-    local k; k=$(read_key)
-    case "$k" in
-      UP)    [ "$cur" -gt 0 ] && ((cur--));           printf '\033[%dA\033[J' "$lines"; draw ;;
-      DOWN)  [ "$cur" -lt $((total - 1)) ] && ((cur++)); printf '\033[%dA\033[J' "$lines"; draw ;;
-      ENTER) break ;;
-    esac
+  printf "  %s╭─────────────────────────────────────╮%s\n" "$CY" "$RS"
+  printf "  %s│%s  %-37s%s│%s\n" "$CY" "$RS" "$title" "$CY" "$RS"
+  printf "  %s├─────────────────────────────────────┤%s\n" "$CY" "$RS"
+  for i in "${!options[@]}"; do
+    printf "  %s│%s  %s%d)%s %-33s%s│%s\n" "$CY" "$RS" "$HL" "$((i+1))" "$RS" "${options[$i]}" "$CY" "$RS"
   done
-  printf '\033[?25h'
+  printf "  %s╰─────────────────────────────────────╯%s\n" "$CY" "$RS"
 
-  MENU_RESULT=$cur
-  printf "  %s✓%s %s%s%s\n\n" "$CY" "$RS" "$BD" "${options[$cur]}" "$RS"
+  local choice=""
+  while true; do
+    printf "  %sElegí un número [1-%d]:%s " "$GY" "$total" "$RS"
+    read -r choice
+    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$total" ]; then
+      break
+    fi
+    printf "  %sOpción inválida, ingresá un número entre 1 y %d%s\n" "$YELLOW" "$total" "$RS"
+  done
+
+  MENU_RESULT=$((choice - 1))
+  printf "  %s✓%s %s%s%s\n\n" "$CY" "$RS" "$BD" "${options[$MENU_RESULT]}" "$RS"
 }
 
 # ── Versión ───────────────────────────────────────────────────────────────────
