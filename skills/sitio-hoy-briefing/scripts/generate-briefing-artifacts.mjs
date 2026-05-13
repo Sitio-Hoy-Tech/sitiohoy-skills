@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 
 const inputPath = process.argv[2] ?? '.sitiohoy/intake.json'
@@ -58,7 +59,7 @@ const config = {
   project: projectName,
   slug: projectSlug,
   plan,
-  tenantId: '',
+  tenantId: randomUUID(),  // generado automáticamente — se puede reemplazar por el ID real de Supabase
   siteUrl,
   domain,
   integrations,

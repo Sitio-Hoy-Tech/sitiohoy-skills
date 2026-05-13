@@ -219,30 +219,7 @@ Antes de marcar un módulo como ✅, verificar en estos viewports:
 
 ### Skeleton loader
 
-```css
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.skeleton {
-  background: linear-gradient(90deg,
-    var(--neutral-200) 25%, var(--neutral-100) 50%, var(--neutral-200) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-sm);
-}
-
-@media (prefers-color-scheme: dark) {
-  .skeleton {
-    background: linear-gradient(90deg,
-      var(--neutral-700) 25%, var(--neutral-800) 50%, var(--neutral-700) 75%
-    );
-    background-size: 200% 100%;
-  }
-}
-```
+> CSS de shimmer definido en `core/17-manejo-errores.md` — sección `loading.tsx`. Copiar desde allí.
 
 ### `prefers-reduced-motion` — obligatorio
 

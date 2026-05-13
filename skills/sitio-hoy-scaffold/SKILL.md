@@ -23,6 +23,10 @@ Crear una base consistente antes de escribir UI:
 - Supabase clients server/service
 - `lib/cache-tags.ts`
 - `lib/config/env.ts`
+- `lib/resend/client.ts` (todos los planes con Resend activo)
+- `lib/data/shipping.ts` (Plan Emprendimiento y Empresa)
+- `lib/envia/provinces.ts` (Plan Empresa con Envia activo)
+- `lib/validations/contact.ts` (si página de contacto activa)
 - `styles/tokens.css`
 - `sitiohoy.config.json`
 - `.env.example`
@@ -133,6 +137,10 @@ Si no, ejecutarlas en el orden del workflow para evitar conflictos de lockfile.
 - `styles/tokens.css`
 - `lib/cache-tags.ts`
 - `lib/config/env.ts`
+- `lib/resend/client.ts` (si Resend activo)
+- `lib/data/shipping.ts` (si plan Emprendimiento o Empresa)
+- `lib/envia/provinces.ts` (si plan Empresa con Envia)
+- `lib/validations/contact.ts` (si página de contacto)
 - `app/layout.tsx`, `app/error.tsx`, `app/not-found.tsx`
 - `README.md`
 

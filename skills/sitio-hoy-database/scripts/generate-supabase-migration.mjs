@@ -288,6 +288,7 @@ CREATE INDEX IF NOT EXISTS idx_product_images_product ON public.product_images(p
 CREATE INDEX IF NOT EXISTS idx_product_variants_product ON public.product_variants(product_id);
 CREATE INDEX IF NOT EXISTS idx_contact_messages_tenant_created ON public.contact_messages(tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_payment_events_order ON public.payment_events(order_id);
+CREATE INDEX IF NOT EXISTS idx_user_tenants_tenant_id ON public.user_tenants(tenant_id);
 
 ALTER TABLE public.tenants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_tenants ENABLE ROW LEVEL SECURITY;
@@ -392,8 +393,10 @@ BEGIN
   ON CONFLICT (user_id, tenant_id) DO NOTHING;
 
   -- 4. Inyectar tenant_id en app_metadata del usuario para que get_tenant_id() funcione
+  -- COALESCE es necesario: si raw_app_meta_data es NULL (usuario nuevo), el operador ||
+  -- devuelve NULL en lugar del objeto esperado.
   UPDATE auth.users
-  SET raw_app_meta_data = raw_app_meta_data || jsonb_build_object('tenant_id', v_tenant_id)
+  SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb) || jsonb_build_object('tenant_id', v_tenant_id)
   WHERE id = v_user_id;
 
   RAISE NOTICE 'Seed OK — tenant_id: %, user_id: %', v_tenant_id, v_user_id;

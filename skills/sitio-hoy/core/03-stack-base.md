@@ -73,21 +73,7 @@ export const createServiceClient = () =>
   )
 ```
 
-```typescript
-// lib/supabase/tenant.ts — obtener credenciales del tenant activo
-import { createServiceClient } from './server'
-
-export async function getTenantConfig(tenantId: string) {
-  const supabase = createServiceClient()
-  const { data, error } = await supabase
-    .from('tenants')
-    .select('mp_access_token, mp_public_key, resend_api_key, envia_access_token, umami_url, umami_website_id, url, name')
-    .eq('id', tenantId)
-    .single()
-  if (error) throw error
-  return data
-}
-```
+> `getTenantConfig()` con `unstable_cache` y tags ISR: ver `core/12-env-vars.md`.
 
 ## `next.config.ts` base
 

@@ -51,6 +51,10 @@ import { getResendClient } from '@/lib/resend/client'   // null si no está conf
 import { createServiceClient } from '@/lib/supabase/server'
 
 // Rate limiting simple por IP — sin paquetes externos
+// ⚠️ ADVERTENCIA VERCEL: Este Map vive en memoria del proceso. En Vercel (serverless),
+// cada invocación puede ser una instancia diferente — el Map NO persiste entre requests.
+// El honeypot sigue siendo la protección principal. Para rate limiting real en producción,
+// usar Upstash Redis (@upstash/ratelimit) o Vercel KV.
 const attempts = new Map<string, { count: number; resetAt: number }>()
 
 const escapeHtml = (value: string): string =>

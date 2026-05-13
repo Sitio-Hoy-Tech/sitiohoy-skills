@@ -25,7 +25,7 @@ for (const file of codeFiles) {
   const rel = path.relative(root, file)
   const text = await readFile(file, 'utf8')
   if (/<img[\s>]/.test(text)) add('error', 'Usar next/image en lugar de <img>.', rel)
-  if (/revalidatePath\(\s*['"]\/['"]\s*\)/.test(text)) add('error', 'No usar revalidatePath global. Usar revalidateTag.', rel)
+  if (/revalidatePath\s*\(\s*['"]\//.test(text)) add('error', 'No usar revalidatePath global. Usar revalidateTag.', rel)
   if (/SUPABASE_SERVICE_ROLE_KEY/.test(text) && /NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY/.test(text)) {
     add('error', 'Service role key no puede tener prefijo NEXT_PUBLIC_.', rel)
   }

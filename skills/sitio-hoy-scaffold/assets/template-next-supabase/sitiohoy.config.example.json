@@ -1,5 +1,10 @@
 {
   "project": "Nombre del negocio",
+  "business": {
+    "name": "Nombre del negocio",
+    "slug": "nombre-del-negocio",
+    "industry": "indumentaria"
+  },
   "plan": "esencial",
   "tenantId": "",
   "siteUrl": "",
