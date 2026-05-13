@@ -31,22 +31,20 @@ Al invocar este skill:
 
 ### Paso 1 — Briefing y Config del Proyecto (PRIMERO)
 
-Usar `sitio-hoy-briefing`.
+Usar `sitio-hoy-briefing`. **No hacer preguntas por consola — siempre abrir el formulario web.**
 
-1. Enviar onboarding técnico + briefing de negocio/diseño.
-2. No continuar hasta recibir respuestas.
-3. Normalizar respuestas en `.sitiohoy/intake.json`.
-4. Generar:
-   - `sitiohoy.config.json`
-   - `brief.md`
-5. Usar `sitio-hoy-project-director` para generar context packs y dirección visual:
+1. Buscar `briefing-server.mjs` en las carpetas de skills del proyecto:
+   - `.claude/skills/sitio-hoy-briefing/scripts/briefing-server.mjs`
+   - `.agents/skills/sitio-hoy-briefing/scripts/briefing-server.mjs`
+   - `.opencode/skills/sitio-hoy-briefing/scripts/briefing-server.mjs`
+2. Correr `node <ruta>/briefing-server.mjs` desde la raíz del proyecto.
+3. El servidor abre `http://localhost:3456` automáticamente.
+4. Esperar a que el cliente complete y envíe el formulario.
+5. El servidor genera `.sitiohoy/intake.json` y `sitiohoy.config.json` automáticamente.
+6. Usar `sitio-hoy-project-director` para generar context packs y dirección visual:
    - `.sitiohoy/context/`
    - `.sitiohoy/design/`
-6. Con `sitiohoy.config.json`, determinar qué plan importar.
-
-Fallback: si la skill especializada no está disponible, leer `core/01-onboarding-tecnico.md`
-y `core/02-briefing.md`, pero igual generar `sitiohoy.config.json` y `brief.md`.
-Luego generar context packs con `sitio-hoy-project-director`.
+7. Con `sitiohoy.config.json`, determinar qué plan importar.
 
 ### Paso 2 — Importar archivos del plan
 

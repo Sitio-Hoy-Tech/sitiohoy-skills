@@ -26,40 +26,30 @@ Usar antes de `sitio-hoy-scaffold` cuando:
 
 ## Workflow
 
-### Opción A — Formulario web (recomendado)
+### Formulario web (SIEMPRE usar esto — no hacer preguntas por consola)
+
+El servidor no tiene dependencias npm. Correrlo con `node` directamente:
 
 ```bash
-npm run sitiohoy:briefing
-# Abre http://localhost:3456 en el navegador
-# El cliente completa el formulario, sube assets y envía
-# Se generan automáticamente: .sitiohoy/intake.json + sitiohoy.config.json + _assets-cliente/
+# Localizar el script (usar la ruta donde están instaladas las skills)
+node ~/.claude/skills/sitio-hoy-briefing/scripts/briefing-server.mjs
+# Si está en .claude/skills/:
+node .claude/skills/sitio-hoy-briefing/scripts/briefing-server.mjs
+# Si está en .agents/skills/:
+node .agents/skills/sitio-hoy-briefing/scripts/briefing-server.mjs
+# Si está en .opencode/skills/:
+node .opencode/skills/sitio-hoy-briefing/scripts/briefing-server.mjs
 ```
 
-El formulario web (`assets/briefing-form.html`) está pre-construido. No requiere generación por IA.
+**Pasos:**
+1. Encontrar la ruta correcta del script buscando `briefing-server.mjs` en las carpetas de skills del proyecto.
+2. Correr `node <ruta>/briefing-server.mjs` desde la raíz del proyecto.
+3. Abrir `http://localhost:3456` en el navegador (el servidor lo hace automáticamente).
+4. Esperar a que el cliente complete y envíe el formulario.
+5. El servidor genera automáticamente: `.sitiohoy/intake.json` + `sitiohoy.config.json` + `_assets-cliente/`
+6. Una vez generados los archivos, continuar con el workflow.
 
-### Opción B — Conversacional (fallback si no hay npm/Node)
-
-1. Enviar el cuestionario de `references/questions.md`.
-2. Esperar respuestas del cliente. **No continuar hasta recibirlas.**
-3. Normalizar internamente las respuestas al contrato `references/intake-schema.md`.
-4. Crear carpeta `.sitiohoy/` en la raíz si no existe.
-5. Guardar el JSON normalizado en `.sitiohoy/intake.json`.
-6. Generar `sitiohoy.config.json` desde el intake (ver estructura en `references/intake-schema.md`).
-7. Generar `brief.md` con: negocio, audiencia, tono, identidad visual, catálogo, páginas, contacto, redes, assets faltantes.
-8. Validar la config:
-   ```bash
-   node scripts/validate-config.mjs    # si el script existe en el proyecto
-   ```
-   Si el script no existe aún, validar manualmente que `sitiohoy.config.json` cumpla los campos requeridos.
-9. Continuar con `sitio-hoy-scaffold`.
-
-## Fallback sin skill system (cualquier IA)
-
-Si tu entorno no soporta delegación a skills:
-1. Leer `references/questions.md` y enviar las preguntas al cliente
-2. Con las respuestas, construir `intake.json` siguiendo `references/intake-schema.md`
-3. Crear `sitiohoy.config.json` y `brief.md` manualmente
-4. No se requiere ejecutar ningún script — los artefactos son archivos JSON y Markdown
+**No hacer preguntas por consola.** Si `node` no está disponible, informar al cliente y pedir que instale Node.js.
 
 ## Reglas de normalización
 
