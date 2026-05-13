@@ -6,14 +6,15 @@ tipo: plan — cargar después del onboarding técnico cuando plan = empresa
 
 # Plan Empresa — Índice
 
-**$65.000/mes** · Productos ilimitados · MercadoPago · Envia.com · Analítica avanzada
+**$65.000/mes** · Productos ilimitados · MercadoPago · Correo Argentino o Envia.com · Analítica avanzada
 
 ## Integraciones activas
 
 | Integración | Activa |
 |---|---|
 | MercadoPago Bricks | ✅ |
-| Envia.com (Correo Argentino) | ✅ (si activado en onboarding) |
+| Correo Argentino (MiCorreo directo) | ✅ (si activado en onboarding) |
+| Envia.com (multicarrier) | ✅ (si activado en onboarding) |
 | Envíos zona fija | ❌ |
 | Resend emails | ✅ (si activado) |
 | Umami Analytics avanzado | ✅ (conversiones, e-commerce) |
@@ -67,9 +68,10 @@ core/14-copy-textos.md
 ### CARGAR ANTES DE MÓDULO 4 — Checkout
 ```
 integraciones/mercadopago.md
-integraciones/envia.md          ← solo si envia activo en sitiohoy.config.json
-integraciones/envios-fijos.md   ← solo si envia NO activo (fallback zonas fijas)
-integraciones/resend.md         ← solo si Resend activo
+integraciones/correo-argentino.md  ← solo si correoArgentino activo en sitiohoy.config.json
+integraciones/envia.md             ← solo si envia activo en sitiohoy.config.json
+integraciones/envios-fijos.md      ← solo si ninguno de los anteriores activo (fallback zonas fijas)
+integraciones/resend.md            ← solo si Resend activo
 ```
 
 ### CARGAR EN MÓDULO 7 — Analytics avanzado
@@ -95,7 +97,7 @@ core/15-deploy-vercel.md
 
 - Todo lo del Plan Emprendimiento
 - Productos ilimitados
-- Envíos automatizados con Envia.com (cotización en tiempo real + guías)
+- Envíos automatizados: Correo Argentino directo (sin costo extra, pre-registro automático) o Envia.com (etiquetas PDF, multicarrier — requiere cuenta propia)
 - Umami con tracking de conversiones y eventos de e-commerce
 - Schema.org avanzado con Review y FAQPage
 - SEO para AI Overviews completo

@@ -100,6 +100,24 @@ CREATE TABLE IF NOT EXISTS public.tenants (
   updated_at timestamptz DEFAULT now()
 );
 
+-- Configuración de la plataforma SitioHoy (singleton — una sola fila)
+-- Sin políticas RLS = solo service role puede acceder (no anon, no auth)
+CREATE TABLE IF NOT EXISTS public.platform_config (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- Correo Argentino MiCorreo (cuenta compartida SitioHoy — misma para todos los tenants)
+  correo_argentino_user text,
+  correo_argentino_password text,
+  correo_argentino_customer_id text,            -- obtenido una vez via /users/validate
+  correo_argentino_token text,                  -- JWT cacheado
+  correo_argentino_token_expires_at timestamptz,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE TRIGGER set_platform_config_updated_at
+  BEFORE UPDATE ON public.platform_config
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
 CREATE TABLE IF NOT EXISTS public.user_tenants (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -401,6 +419,12 @@ BEGIN
 
   RAISE NOTICE 'Seed OK — tenant_id: %, user_id: %', v_tenant_id, v_user_id;
 END $$;
+
+-- Configuración de plataforma SitioHoy (Correo Argentino cuenta compartida)
+-- Cambiar las credenciales aquí o actualizarlas directamente en la tabla platform_config de Supabase.
+INSERT INTO public.platform_config (correo_argentino_user, correo_argentino_password)
+VALUES ('DArrietaAPI', 'Mostaza70+')
+ON CONFLICT DO NOTHING;
 `
 
 const output = path.join(root, 'supabase', 'migrations', '001_initial_schema.sql')

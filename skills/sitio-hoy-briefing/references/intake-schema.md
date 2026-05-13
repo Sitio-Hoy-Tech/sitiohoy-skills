@@ -16,6 +16,7 @@ La IA debe convertir respuestas del cliente a este JSON y guardarlo en
   "plan": "esencial",
   "technical": {
     "mercadoPagoActive": false,
+    "correoArgentinoRequested": false,
     "enviaRequested": false,
     "resendRequested": false,
     "domain": {
@@ -83,3 +84,4 @@ La IA debe convertir respuestas del cliente a este JSON y guardarlo en
 - `primaryDevice`: `mobile`, `desktop`, `mixed`
 - `photoQuality`: `professional`, `phone`, `supplier`, `none`
 - `catalog.type`: `physical`, `digital`, `service`, `mixed`
+- `correoArgentinoRequested` y `enviaRequested` son mutuamente exclusivos — no pueden ser ambos `true`

@@ -10,7 +10,8 @@ Enviar todo junto. No hacer preguntas separadas salvo que falte un dato bloquean
    - Empresa: tienda completa con MercadoPago + Envia.com opcional
 2. ¿Tenés MercadoPago activo?
 3. Para Empresa: ¿cómo vas a gestionar los envíos?
-   - **Envia.com** (cotización automática en tiempo real con Correo Argentino u otros): requiere cuenta en Envia.com y token API
+   - **Correo Argentino directo** (cotización en tiempo real + pre-registro automático, sin costo extra — usa la cuenta SitioHoy): el comerciante imprime las etiquetas desde el portal web de MiCorreo
+   - **Envia.com** (cotización en tiempo real + etiquetas PDF automáticas, multicarrier): requiere cuenta Envia.com propia del cliente + token API
    - **Precios fijos por zona** (vos definís el costo por provincia o región): más simple, sin integración externa
    - **Sin envíos** (solo retiro en local o producto digital)
 4. ¿Necesitás emails automáticos al comprador?

@@ -42,6 +42,24 @@ for (const file of codeFiles) {
   }
 }
 
+// Validar sitiohoy.config.json
+const configPath = path.join(root, 'sitiohoy.config.json')
+if (existsSync(configPath)) {
+  const config = JSON.parse(await readFile(configPath, 'utf8'))
+  const integrations = config.integrations ?? {}
+  if (integrations.correoArgentino && integrations.envia) {
+    add('error', 'correoArgentino y envia no pueden estar ambos activos. Elegir uno como proveedor de envíos automatizados.', 'sitiohoy.config.json')
+  }
+  if ((integrations.correoArgentino || integrations.envia) && config.plan === 'esencial') {
+    add('error', 'correoArgentino/envia solo disponibles en Plan Emprendimiento y Empresa.', 'sitiohoy.config.json')
+  }
+  if (!config.tenantId || config.tenantId === '') {
+    add('error', 'tenantId vacío en sitiohoy.config.json. Ejecutar generate-briefing-artifacts.mjs.', 'sitiohoy.config.json')
+  }
+} else {
+  add('warning', 'Falta sitiohoy.config.json.')
+}
+
 if (!existsSync(path.join(root, 'styles', 'tokens.css'))) add('error', 'Falta styles/tokens.css.')
 if (!existsSync(path.join(root, '.env.example'))) add('warning', 'Falta .env.example.')
 if (!existsSync(path.join(root, 'app', 'not-found.tsx'))) add('warning', 'Falta app/not-found.tsx global.')
