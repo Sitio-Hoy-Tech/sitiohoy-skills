@@ -758,6 +758,7 @@ function buildDesignMd(intake, integrations) {
   const catalog = intake.catalog ?? {}
   const pages = intake.pages ?? {}
   const assets = intake.assets ?? {}
+  const contact = intake.contact ?? {}
   const technical = intake.technical ?? {}
   const plan = String(intake.plan ?? 'esencial').toLowerCase()
   const hasCheckout = plan === 'emprendimiento' || plan === 'empresa'
@@ -765,330 +766,401 @@ function buildDesignMd(intake, integrations) {
   const tone = String(audience.tone ?? 'profesional').toLowerCase()
   const style = String(visual.style ?? 'moderno').toLowerCase()
 
-  const typoMap = {
-    cercano: {
-      display: { family: 'Nunito', fallback: 'Quicksand', weight: 700, style: 'rounded, friendly' },
-      body: { family: 'Inter', fallback: 'Source Sans 3', weight: 400, style: 'legible, warm' },
-    },
-    profesional: {
-      display: { family: 'Outfit', fallback: 'Manrope', weight: 700, style: 'geometric, clean' },
-      body: { family: 'Inter', fallback: 'IBM Plex Sans', weight: 400, style: 'neutral, precise' },
-    },
-    juvenil: {
-      display: { family: 'Space Grotesk', fallback: 'Sora', weight: 700, style: 'bold, playful' },
-      body: { family: 'DM Sans', fallback: 'Rubik', weight: 400, style: 'modern, energetic' },
-    },
-    exclusivo: {
-      display: { family: 'Playfair Display', fallback: 'Cormorant', weight: 700, style: 'serif, elegant' },
-      body: { family: 'Lora', fallback: 'Source Serif 4', weight: 400, style: 'refined, readable' },
-    },
-    informal: {
-      display: { family: 'Poppins', fallback: 'Comfortaa', weight: 700, style: 'rounded, casual' },
-      body: { family: 'Nunito Sans', fallback: 'Karla', weight: 400, style: 'friendly, legible' },
-    },
+  const toneDescriptions = {
+    cercano: 'Cercano, amigable, como hablar con un amigo. Tuteo. Frases cortas y directas.',
+    profesional: 'Profesional, confiable, directo. Neutro o ustedeo. Sin jerga excesiva.',
+    juvenil: 'Joven, dinámico, divertido. Tuteo. Emojis moderados. Energético.',
+    exclusivo: 'Elegante, sobrio, refinado. Ustedeo. Lenguaje cuidado y selecto.',
+    informal: 'Informal, relajado, sin pretensiones. Tuteo. Como una charla de café.',
   }
 
-  const typo = typoMap[tone] || typoMap.profesional
-  const isDark = style.includes('dark') || style.includes('oscuro')
+  const toneDesc = toneDescriptions[tone] || toneDescriptions.profesional
 
-  const primaryColor = visual.colors?.primary || '#16a05d'
-  const secondaryColor = visual.colors?.secondary || '#1a1a2e'
-  const accentColor = visual.colors?.accent || '#e8b43f'
-
-  const bgColor = isDark ? '#0a0a0a' : '#ffffff'
-  const surfaceColor = isDark ? '#141414' : '#fafafa'
-  const textColor = isDark ? '#f5f5f5' : '#1a1a1a'
-  const textMutedColor = isDark ? '#a0a0a0' : '#6b7280'
-
-  const animLevel = intake.animations ?? 'subtle'
-
-  // Plan page definitions
-  const planPages = {
-    esencial: {
-      required: ['Home', 'Catálogo', 'Producto', 'Sobre Nosotros', 'FAQ', 'Contacto', 'Términos y Privacidad', '404', 'Error'],
-      checkout: false,
-    },
-    emprendimiento: {
-      required: ['Home', 'Catálogo', 'Producto', 'Carrito', 'Checkout (Datos)', 'Checkout (Envío)', 'Checkout (Pago)', 'Checkout (Confirmación)', 'Seguimiento de Pedido', 'Sobre Nosotros', 'FAQ', 'Contacto', 'Términos y Privacidad', '404', 'Error'],
-      checkout: true,
-    },
-    empresa: {
-      required: ['Home', 'Catálogo', 'Producto', 'Carrito', 'Checkout (Datos)', 'Checkout (Envío)', 'Checkout (Pago)', 'Checkout (Confirmación)', 'Seguimiento de Pedido', 'Sobre Nosotros', 'FAQ', 'Contacto', 'Términos y Privacidad', 'Blog (opcional)', '404', 'Error'],
-      checkout: true,
-    },
+  const styleHints = {
+    moderno: 'Moderno y limpio. Sin exceso de decoración.',
+    vintage: 'Vintage o retro. Puede incluir texturas, tipografía clásica, colores nostálgicos.',
+    minimalista: 'Minimalista. Mucho espacio en blanco, pocos elementos, tipografía cuidada.',
+    elegante: 'Elegante y sofisticado. Detalles refinados, paleta cromática sobria.',
+    jugueton: 'Juguetón y colorido. Formas orgánicas, colores vivos, energía positiva.',
+    industrial: 'Industrial o urbano. Texturas de concreto/metal, tipografía bold, alto contraste.',
+    organico: 'Orgánico y natural. Colores tierra, formas suaves, tipografía artesanal.',
+    tecnologico: 'Tecnológico. Líneas limpias, acentos neón, tipografía monoespaciada o geométrica.',
+    oscuro: 'Dark mode como estilo principal. Alto contraste, acentos brillantes.',
   }
 
-  const pageList = planPages[plan]?.required || planPages.esencial.required
+  const styleHint = styleHints[style] || styleHints.moderno
+
+  const primaryDevice = audience.primaryDevice ?? 'mobile'
+  const devicePriority = primaryDevice === 'mobile'
+    ? 'Mobile-first. Diseñá primero para celular y luego escalá a desktop.'
+    : primaryDevice === 'desktop'
+      ? 'Desktop-priority. El público principal usa computadora, pero el sitio debe verse bien en mobile igual.'
+      : 'Diseño equilibrado mobile/desktop. Ambos son importantes.'
+
+  const list = (items) => Array.isArray(items) && items.length
+    ? items.map(i => typeof i === 'string' ? i : i?.url ? `${i.network}: ${i.url}` : JSON.stringify(i)).join(', ')
+    : 'ninguno'
+
+  // Pages by plan
+  function getPagesForPlan() {
+    const base = ['Home']
+    if (plan === 'esencial') {
+      base.push('Catálogo', 'Detalle de Producto')
+      if (pages.about) base.push('Sobre Nosotros')
+      if (pages.faq) base.push('FAQ / Preguntas Frecuentes')
+      if (pages.contact) base.push('Contacto')
+      if (pages.legal) base.push('Términos y Privacidad')
+      base.push('404 / Error')
+    } else if (plan === 'emprendimiento') {
+      base.push('Catálogo', 'Detalle de Producto', 'Carrito', 'Checkout multi-step', 'Seguimiento de Pedido')
+      if (pages.about) base.push('Sobre Nosotros')
+      if (pages.faq) base.push('FAQ / Preguntas Frecuentes')
+      if (pages.contact) base.push('Contacto')
+      if (pages.legal) base.push('Términos y Privacidad')
+      base.push('404 / Error')
+    } else {
+      base.push('Catálogo', 'Detalle de Producto', 'Carrito', 'Checkout multi-step', 'Seguimiento de Pedido')
+      if (pages.about) base.push('Sobre Nosotros')
+      if (pages.faq) base.push('FAQ / Preguntas Frecuentes')
+      if (pages.contact) base.push('Contacto')
+      if (pages.legal) base.push('Términos y Privacidad')
+      if (pages.blog) base.push('Blog')
+      base.push('404 / Error')
+    }
+    return base
+  }
+
+  const pagesList = getPagesForPlan()
+  const primaryCTA = !hasCheckout ? 'Consultar por WhatsApp / Ver catálogo' : 'Comprar ahora / Ver catálogo'
+
+  let shippingDesc = 'Sin envíos automatizados. El cliente coordina por WhatsApp.'
+  if (plan === 'emprendimiento') shippingDesc = 'Envíos por zonas fijas (CABA, GBA, Interior). El precio se calcula según la zona.'
+  if (plan === 'empresa' && technical.correoArgentinoRequested) shippingDesc = 'Envíos con Correo Argentino (MiCorreo). Cotización en tiempo real.'
+  if (plan === 'empresa' && technical.enviaRequested) shippingDesc = 'Envíos con Envia.com (multicarrier). Etiquetas PDF, múltiples carriers.'
 
   const lines = []
 
-  // Header
-  lines.push(`# DESIGN.md — ${business.name || 'Proyecto'}`, '')
-  lines.push(`> Documento de diseño completo generado automáticamente por SitioHoy Briefing`)
-  lines.push(`> Fecha: ${new Date().toISOString().split('T')[0]}`)
-  lines.push(`> Plan: ${plan.toUpperCase()}`)
-  lines.push(`> Versión: 1.0`, '')
+  // ═══════════════════════════════════════════════════════════════════════════
+  // HEADER
+  // ═══════════════════════════════════════════════════════════════════════════
+  lines.push(`# DESIGN.md — Brief Creativo para Stitch`)
+  lines.push(``)
+  lines.push(`> **Proyecto:** ${business.name || 'Sin definir'}`)
+  lines.push(`> **Plan:** ${plan === 'esencial' ? 'Esencial' : plan === 'emprendimiento' ? 'Emprendimiento' : 'Empresa'}`)
+  lines.push(`> **Rubro:** ${business.industry || 'Sin definir'}`)
+  lines.push(`> **Fecha:** ${new Date().toISOString().split('T')[0]}`)
+  lines.push(``)
+  lines.push(`---`)
+  lines.push(``)
 
-  // 1. Project Info
-  lines.push('## 1. Información del Proyecto', '')
-  lines.push(`| Campo | Valor |`)
-  lines.push(`|---|---|`)
-  lines.push(`| **Nombre** | ${business.name || 'Sin definir'} |`)
-  lines.push(`| **Slug** | ${business.slug || 'Sin definir'} |`)
-  lines.push(`| **Rubro** | ${business.industry || 'Sin definir'} |`)
-  lines.push(`| **Plan** | ${plan.toUpperCase()} |`)
-  lines.push(`| **Descripción** | ${business.description || 'Sin definir'} |`)
-  lines.push(`| **Diferenciador** | ${business.differentiator || 'Sin definir'} |`)
-  lines.push(`| **Objetivo Principal** | ${business.primaryGoal || 'Sin definir'} |`)
-  lines.push(`| **Estilo Visual** | ${visual.style || 'Sin definir'} |`)
-  lines.push(`| **Mood** | ${visual.desiredMood || audience.desiredFeeling || 'Sin definir'} |`)
-  lines.push(`| **Animaciones** | ${animLevel.toUpperCase()} |`)
-  lines.push('')
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 1. EL NEGOCIO
+  // ═══════════════════════════════════════════════════════════════════════════
+  lines.push(`## 1. Sobre el Negocio`)
+  lines.push(``)
+  lines.push(`**Nombre:** ${business.name || 'Sin definir'}`)
+  lines.push(``)
+  lines.push(`**Descripción:**`)
+  lines.push(`${business.description || 'Sin definir'}`)
+  lines.push(``)
+  lines.push(`**Diferenciador / Por qué elegirlos:**`)
+  lines.push(`${business.differentiator || 'Sin definir'}`)
+  lines.push(``)
+  lines.push(`**Objetivo del sitio web:**`)
+  lines.push(`${business.primaryGoal || 'Mostrar productos y generar contactos/ventas'}`)
+  lines.push(``)
+  lines.push(`**Plan contratado:** ${plan === 'esencial' ? 'Esencial — Catálogo sin checkout. CTA principal: WhatsApp.' : plan === 'emprendimiento' ? 'Emprendimiento — Tienda con checkout, MercadoPago, envíos por zona fija.' : 'Empresa — Tienda completa con checkout, MercadoPago, envíos avanzados, analítica avanzada.'}`)
+  lines.push(``)
 
-  // 2. Audience
-  lines.push('## 2. Audiencia Objetivo', '')
-  lines.push(`| Campo | Valor |`)
-  lines.push(`|---|---|`)
-  lines.push(`| **Perfil** | ${audience.profile || 'Sin definir'} |`)
-  lines.push(`| **Problema** | ${audience.problem || 'Sin definir'} |`)
-  lines.push(`| **Sensación** | ${audience.desiredFeeling || 'Sin definir'} |`)
-  lines.push(`| **Tono** | ${tone.toUpperCase()} |`)
-  lines.push(`| **Dispositivo** | ${audience.primaryDevice || 'mixed'} |`)
-  lines.push('')
-  lines.push('### Lenguaje y Comunicación')
-  lines.push('')
-  lines.push(`- **Tono:** ${tone}`)
-  lines.push(`- **Tratamiento:** ${tone === 'cercano' || tone === 'juvenil' || tone === 'informal' ? 'Tuteo (vos)' : 'Ustedeo o neutro'}`)
-  lines.push(`- **CTAs:** ${tone === 'juvenil' ? 'Energéticos, imperativos' : tone === 'exclusivo' ? 'Elegantes, invitativos' : 'Claros, accionables'}`)
-  lines.push('')
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 2. PÚBLICO OBJETIVO
+  // ═══════════════════════════════════════════════════════════════════════════
+  lines.push(`## 2. Público Objetivo`)
+  lines.push(``)
+  lines.push(`**Perfil:**`)
+  lines.push(`${audience.profile || 'Sin definir'}`)
+  lines.push(``)
+  lines.push(`**Problema que resuelve el negocio:**`)
+  lines.push(`${audience.problem || 'Sin definir'}`)
+  lines.push(``)
+  lines.push(`**Sensación que debe transmitir el sitio:**`)
+  lines.push(`${audience.desiredFeeling || 'Sin definir'}`)
+  lines.push(``)
+  lines.push(`**Dispositivo principal:**`)
+  lines.push(`${devicePriority}`)
+  lines.push(``)
 
-  // 3. Colors
-  lines.push('## 3. Paleta de Colores', '')
-  lines.push('### Marca')
-  lines.push(`| Rol | Hex | Uso |`)
-  lines.push(`|---|---|---|`)
-  lines.push(`| **Primario** | ${primaryColor} | CTAs, botones, acentos |`)
-  lines.push(`| **Secundario** | ${secondaryColor} | Headers, fondos oscuros |`)
-  lines.push(`| **Acento** | ${accentColor} | Badges, etiquetas |`)
-  lines.push('')
-  lines.push('### Fondos')
-  lines.push(`| Rol | Hex |`)
-  lines.push(`|---|---|`)
-  lines.push(`| **Background** | ${bgColor} |`)
-  lines.push(`| **Surface** | ${surfaceColor} |`)
-  lines.push(`| **Texto** | ${textColor} |`)
-  lines.push(`| **Texto Secundario** | ${textMutedColor} |`)
-  lines.push('')
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 3. IDENTIDAD VISUAL
+  // ═══════════════════════════════════════════════════════════════════════════
+  lines.push(`## 3. Identidad Visual`)
+  lines.push(``)
 
-  // 4. Typography
-  lines.push('## 4. Tipografía', '')
-  lines.push(`| Rol | Fuente | Fallback | Weight |`)
-  lines.push(`|---|---|---|---|`)
-  lines.push(`| **Display** | ${typo.display.family} | ${typo.display.fallback} | ${typo.display.weight} |`)
-  lines.push(`| **Body** | ${typo.body.family} | ${typo.body.fallback} | ${typo.body.weight} |`)
-  lines.push('')
-  lines.push('### Escala')
-  lines.push(`| Elemento | Mobile | Desktop | Line-height |`)
-  lines.push(`|---|---|---|---|`)
-  lines.push(`| H1 | 32px | 56px | 1.1 |`)
-  lines.push(`| H2 | 28px | 40px | 1.2 |`)
-  lines.push(`| H3 | 22px | 28px | 1.3 |`)
-  lines.push(`| Body | 14px | 16px | 1.6 |`)
-  lines.push(`| Small | 12px | 14px | 1.5 |`)
-  lines.push('')
-
-  // 5. Layout
-  lines.push('## 5. Layout y Grid', '')
-  lines.push(`| Breakpoint | Ancho | Uso |`)
-  lines.push(`|---|---|---|`)
-  lines.push(`| Mobile | 375px | Base design |`)
-  lines.push(`| Tablet | 768px | 2 columnas |`)
-  lines.push(`| Desktop | 1280px | Layout completo |`)
-  lines.push(`| Wide | 1920px | Desktop grande |`)
-  lines.push('')
-
-  // 6. Components
-  lines.push('## 6. Componentes Clave', '')
-  lines.push('### Header')
-  lines.push('- Altura: 64px mobile, 72px desktop')
-  lines.push('- Fondo: transparente en hero, blur al scrollear')
-  lines.push('- Logo izquierda, nav centrada, CTA derecha')
-  lines.push('- Mobile: hamburguesa + drawer desde derecha')
-  lines.push('')
-  lines.push('### Footer')
-  lines.push('- 4 columnas desktop, 1 columna mobile')
-  lines.push('- Copyright izquierda, crédito SitioHoy derecha')
-  lines.push('- Logo SitioHoy: 72x24px con link a sitiohoy.com.ar')
-  lines.push('')
-  lines.push('### Product Card')
-  lines.push('- Border-radius: 12px, aspect-ratio 1/1')
-  lines.push('- Hover: scale(1.02) + shadow-md, 250ms')
-  lines.push('- Badge: "Nuevo", "Oferta", "Últimas unidades"')
-  lines.push('')
-
-  if (hasCheckout) {
-    lines.push('### Cart Drawer')
-    lines.push('- Ancho: 100vw mobile, 420px desktop')
-    lines.push('- Overlay oscuro 50%')
-    lines.push('- Items: imagen 80x80 + info + eliminar')
-    lines.push('')
-    lines.push('### Checkout')
-    lines.push('- Max-width: 600px centrado')
-    lines.push('- Steps: Datos → Envío → Pago → Confirmación')
-    lines.push('- Progress bar visible')
-    lines.push('')
-  }
-
-  // 7. Pages
-  lines.push('## 7. Páginas a Diseñar', '')
-  lines.push(`**Total: ${pageList.length} páginas**`)
-  lines.push(`**Plan: ${plan.toUpperCase()}**`)
-  lines.push('')
-  pageList.forEach((page, idx) => {
-    lines.push(`### ${idx + 1}. ${page}`)
-    if (page === 'Home') {
-      lines.push('- Hero: headline + CTA + imagen')
-      lines.push('- Categorías destacadas (grid 3-4)')
-      lines.push('- Productos destacados')
-      lines.push('- Trust signals')
-      lines.push('- Testimonios (si aplica)')
-      lines.push('- CTA final')
-      if (!hasCheckout) lines.push('- WhatsApp banner prominente')
-    } else if (page === 'Catálogo') {
-      lines.push('- Header con título y breadcrumb')
-      lines.push('- Filtros (sidebar desktop, drawer mobile)')
-      lines.push('- Grid productos 2-4 columnas')
-      lines.push('- Paginación o infinite scroll')
-    } else if (page === 'Producto') {
-      lines.push('- Galería: imagen principal + thumbnails')
-      lines.push('- Info: nombre, precio, descripción')
-      lines.push('- Variantes (selector visual)')
-      lines.push('- Stock indicator')
-      lines.push('- CTA: "Agregar al carrito" o "Consultar por WhatsApp"')
-      lines.push('- Productos relacionados')
-    } else if (page.includes('Checkout')) {
-      lines.push('- Progress bar del paso actual')
-      lines.push('- Formulario del paso')
-      lines.push('- Resumen sticky (desktop)')
-      lines.push('- CTA principal ancho completo')
-    } else if (page === 'Carrito') {
-      lines.push('- Lista items con imagen, cantidad, precio')
-      lines.push('- Cupón de descuento')
-      lines.push('- Resumen: subtotal, envío, total')
-      lines.push('- CTA checkout')
-    } else if (page === 'Seguimiento de Pedido') {
-      lines.push('- Timeline visual de estados')
-      lines.push('- Detalles del pedido')
-      lines.push('- Info de tracking')
-    } else if (page === 'Sobre Nosotros') {
-      lines.push('- Hero con imagen de equipo/local')
-      lines.push('- Historia del negocio')
-      lines.push('- Equipo o valores')
-      lines.push('- CTA contacto')
-    } else if (page === 'FAQ') {
-      lines.push('- Título "Preguntas Frecuentes"')
-      lines.push('- Accordion con preguntas/respuestas')
-      lines.push('- CTA contacto si no encuentra respuesta')
-    } else if (page === 'Contacto') {
-      lines.push('- Info: dirección, teléfono, email, horarios')
-      lines.push('- Mapa (si aplica)')
-      lines.push('- Formulario de contacto')
-      lines.push('- Redes sociales')
-    } else if (page.includes('404')) {
-      lines.push('- Ilustración o ícono grande')
-      lines.push('- "Página no encontrada"')
-      lines.push('- Links a home, catálogo, contacto')
-    } else if (page.includes('Error')) {
-      lines.push('- Mensaje de error')
-      lines.push('- Botón reintentar')
-      lines.push('- Link a home')
-    } else if (page.includes('Términos')) {
-      lines.push('- Título')
-      lines.push('- Texto legal en secciones')
-      lines.push('- Fecha de actualización')
-    }
-    lines.push('')
-  })
-
-  // 8. Animations
-  lines.push('## 8. Animaciones', '')
-  const animSpecs = {
-    none: 'Sin animaciones. Solo transiciones CSS mínimas.',
-    subtle: 'Fade-in scroll, hover cards scale(1.02), menú slide 300ms, botones active scale(0.98)',
-    full: 'Entrada escalonada hero, parallax sutil, microinteracciones, magnetic hover, page transitions',
-  }
-  lines.push(`${animSpecs[animLevel] || animSpecs.subtle}`)
-  lines.push('')
-
-  // 9. Assets
-  lines.push('## 9. Assets', '')
-  lines.push(`| Recurso | Estado |`)
-  lines.push(`|---|---|`)
-  lines.push(`| Logo | ${visual.logo?.available ? `Sí (${visual.logo.format})` : 'No — generar o solicitar'} |`)
-  lines.push(`| Hero | ${assets.missing?.includes('hero') ? 'No — usar Unsplash' : 'Sí'} |`)
-  lines.push(`| Productos | ${assets.missing?.includes('productos') ? 'No — usar Unsplash' : 'Sí'} |`)
-  lines.push('')
-
-  // 10. Integrations
-  lines.push('## 10. Integraciones Visuales', '')
-  if (hasCheckout) lines.push('- MercadoPago badge: footer, checkout, producto')
-  if (plan === 'empresa' && technical.correoArgentinoRequested) lines.push('- Correo Argentino badge')
-  if (plan === 'empresa' && technical.enviaRequested) lines.push('- Envia.com badge')
-  if (plan === 'emprendimiento') lines.push('- Envíos badge')
-  lines.push('- WhatsApp botón flotante verde')
-  if (hasCheckout && technical.resendRequested) lines.push('- Email ícono footer')
-  lines.push('')
-
-  // 11. Notes for Stitch
-  lines.push('## 11. Notas para Stitch', '')
-  lines.push('')
-  lines.push('### Prioridades')
-  lines.push('1. Mobile-first: diseñar 375px primero')
-  lines.push('2. Conversión: CTA claro en cada página')
-  lines.push('3. Confianza: badges de seguridad visibles')
-  lines.push('4. Consistencia: seguir tokens definidos')
-  lines.push('')
-  lines.push('### Evitar')
-  lines.push('- ❌ Gradientes genéricos sin relación marca')
-  lines.push('- ❌ Glassmorphism sin propósito')
-  lines.push('- ❌ Bordes > 20px en contenedores')
-  lines.push('- ❌ Animaciones en todos los elementos')
-  lines.push('- ❌ Hero genérico sobre stock photo')
-  lines.push('- ❌ Inter/Roboto/Lato por defecto')
-  lines.push('')
-  lines.push('### Incluir siempre')
-  lines.push('- ✅ Header + Footer en todas las pantallas')
-  lines.push('- ✅ Estados hover y active')
-  lines.push('- ✅ Estados loading y empty')
-  lines.push('- ✅ Badges para estados (nuevo, oferta, agotado)')
-  lines.push('')
-  lines.push('### Flujo de trabajo')
-  lines.push('1. Sistema de diseño base (colores, tipografía)')
-  lines.push('2. Header y Footer')
-  lines.push('3. Home completa')
-  lines.push('4. Catálogo y Producto')
-  if (hasCheckout) {
-    lines.push('5. Carrito y Checkout (4 pasos)')
-    lines.push('6. Seguimiento')
-    lines.push('7. Páginas opcionales')
-    lines.push('8. Estados de error')
-    lines.push('9. Revisar responsive')
-    lines.push('10. Exportar assets')
+  if (visual.colors?.primary) {
+    lines.push(`**Color principal:** ${visual.colors.primary}`)
+    lines.push(`- Este es el color de marca. Usalo como guía para la paleta general. Proponé una paleta completa que funcione.`)
   } else {
-    lines.push('5. Páginas opcionales')
-    lines.push('6. Estados de error')
-    lines.push('7. Revisar responsive')
-    lines.push('8. Exportar assets')
+    lines.push(`**Color principal:** No definido — Stitch, proponé una paleta que vaya con el rubro y el estilo.`)
   }
-  lines.push('')
 
-  // Footer
-  lines.push('---', '')
-  lines.push('**Documento generado por SitioHoy v2.0**')
-  lines.push('**Para uso exclusivo con Stitch**')
-  lines.push('**Instrucciones:** Copiar este documento completo en Stitch para generar el diseño.')
-  lines.push('**ID del proyecto Stitch:** [COMPLETAR DESPUÉS DE GENERAR EN STITCH]')
-  lines.push('')
+  if (visual.colors?.secondary) {
+    lines.push(``)
+    lines.push(`**Color secundario:** ${visual.colors.secondary}`)
+  }
+
+  if (visual.colors?.accent) {
+    lines.push(``)
+    lines.push(`**Color de acento:** ${visual.colors.accent}`)
+  }
+
+  lines.push(``)
+  lines.push(`**Estilo visual deseado:** ${style}`)
+  lines.push(`${styleHint}`)
+
+  if (visual.desiredMood) {
+    lines.push(``)
+    lines.push(`**Mood / Sensación visual:** ${visual.desiredMood}`)
+  }
+
+  if (Array.isArray(business.visualReferences) && business.visualReferences.length) {
+    lines.push(``)
+    lines.push(`**Referencias visuales del cliente:**`)
+    business.visualReferences.forEach(ref => {
+      lines.push(`- ${ref}`)
+    })
+    lines.push(`- Tomá estas referencias como inspiración, no como algo a copiar exactamente.`)
+  }
+
+  lines.push(``)
+  lines.push(`**Nivel de animaciones:** ${intake.animations || 'sutiles'}`)
+  lines.push(`- sutiles = hover suaves, fade-ins básicos`)
+  lines.push(`- completas = parallax, microinteracciones, entradas escalonadas`)
+  lines.push(`- ninguna = solo transiciones CSS mínimas`)
+  lines.push(``)
+
+  if (visual.logo?.available) {
+    lines.push(`**Logo:** Sí, el cliente tiene logo (${visual.logo.format || 'formato no especificado'}).`)
+    lines.push(`- Respetalo como elemento principal de marca. Adaptá el diseño a su estilo.`)
+  } else {
+    lines.push(`**Logo:** No — el cliente no tiene logo todavía.`)
+    lines.push(`- El sitio debe funcionar sin logo o con un wordmark tipográfico.`)
+  }
+
+  lines.push(``)
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 4. COMUNICACIÓN
+  // ═══════════════════════════════════════════════════════════════════════════
+  lines.push(`## 4. Comunicación — Tono y Lenguaje`)
+  lines.push(``)
+  lines.push(`**Tono general:** ${toneDesc}`)
+  lines.push(``)
+  lines.push(`**Reglas de comunicación:**`)
+  lines.push(`- Español argentino.`)
+  lines.push(`- Sin anglicismos innecesarios.`)
+  lines.push(`- CTAs claros y accionables.`)
+  lines.push(`- Las descripciones de producto deben comunicar el beneficio primero, la característica después.`)
+  lines.push(``)
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 5. PÁGINAS A DISEÑAR
+  // ═══════════════════════════════════════════════════════════════════════════
+  lines.push(`## 5. Páginas a Diseñar`)
+  lines.push(``)
+  lines.push(`**Plan:** ${plan === 'esencial' ? 'Esencial' : plan === 'emprendimiento' ? 'Emprendimiento' : 'Empresa'}`)
+  lines.push(`**Total de páginas:** ${pagesList.length}`)
+  lines.push(``)
+  lines.push(`**Lista de páginas:**`)
+  pagesList.forEach((page, idx) => {
+    lines.push(`${idx + 1}. ${page}`)
+  })
+  lines.push(``)
+
+  if (hasCheckout) {
+    lines.push(`**Checkout multi-step (4 pasos):**`)
+    lines.push(`1. Datos del comprador`)
+    lines.push(`2. Envío y cotización`)
+    lines.push(`3. Pago (MercadoPago)`)
+    lines.push(`4. Confirmación de compra`)
+    lines.push(``)
+  }
+
+  lines.push(`**Dispositivos a diseñar:**`)
+  lines.push(`- Mobile: 375px (iPhone SE) — ${primaryDevice === 'mobile' ? '**PRIORIDAD**' : 'Importante'}`)
+  lines.push(`- Tablet: 768px (iPad)`)
+  lines.push(`- Desktop: 1280px (laptop) — ${primaryDevice === 'desktop' ? '**PRIORIDAD**' : 'Importante'}`)
+  lines.push(`- Wide: 1440px+ (desktop grande)`)
+  lines.push(``)
+  lines.push(`**Nota:** Mobile-first. Empezá por mobile y escalá hacia arriba.`)
+  lines.push(``)
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 6. CATÁLOGO
+  // ═══════════════════════════════════════════════════════════════════════════
+  lines.push(`## 6. Catálogo de Productos`)
+  lines.push(``)
+  lines.push(`**Cantidad inicial:** ${catalog.initialCount || 'Sin definir'} productos`)
+  lines.push(`**Categorías:** ${list(catalog.categories)}`)
+  lines.push(`**Tiene variantes:** ${catalog.hasVariants ? 'Sí (color, tamaño, sabor, etc.)' : 'No'}`)
+  lines.push(`**Rango de precios:** ${catalog.priceRange || 'Sin definir'}`)
+  lines.push(`**Tipo:** ${catalog.type || 'Sin definir'}`)
+  lines.push(``)
+  if (!hasCheckout) {
+    lines.push(`**Importante:** Este plan NO tiene checkout. El botón principal de cada producto debe ser "Consultar por WhatsApp", no "Comprar".`)
+    lines.push(``)
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 7. INTEGRACIONES VISUALES
+  // ═══════════════════════════════════════════════════════════════════════════
+  lines.push(`## 7. Integraciones Visuales`)
+  lines.push(``)
+  lines.push(`**Qué integraciones activas debe reflejar el diseño:**`)
+  if (hasCheckout) {
+    lines.push(`- ✅ MercadoPago — badge de "Pagá con MercadoPago" en footer, checkout, producto`)
+  } else {
+    lines.push(`- ❌ MercadoPago — no aplica este plan`)
+  }
+  if (plan === 'emprendimiento') {
+    lines.push(`- ✅ Envíos — badge "Envíos a todo el país" en producto, checkout, footer`)
+  } else if (plan === 'empresa' && technical.correoArgentinoRequested) {
+    lines.push(`- ✅ Correo Argentino — badge de envío en producto, checkout, footer`)
+  } else if (plan === 'empresa' && technical.enviaRequested) {
+    lines.push(`- ✅ Envia.com — badge de envío multicarrier en producto, checkout, footer`)
+  } else if (plan === 'empresa') {
+    lines.push(`- ✅ Envíos — según el método elegido`)
+  } else {
+    lines.push(`- ❌ Envíos automatizados — no aplica este plan`)
+  }
+  lines.push(`- ✅ WhatsApp — botón flotante verde en esquina inferior derecha, siempre visible`)
+  if (hasCheckout && technical.resendRequested) {
+    lines.push(`- ✅ Email — icono de email en footer y contacto`)
+  }
+  if (Array.isArray(contact.socials) && contact.socials.length) {
+    lines.push(`- ✅ Redes sociales: ${list(contact.socials)}`)
+  }
+  lines.push(``)
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 8. CONTACTO
+  // ═══════════════════════════════════════════════════════════════════════════
+  lines.push(`## 8. Información de Contacto`)
+  lines.push(``)
+  if (contact.whatsapp) lines.push(`**WhatsApp:** ${contact.whatsapp}`)
+  if (contact.email) lines.push(`**Email:** ${contact.email}`)
+  if (Array.isArray(contact.socials) && contact.socials.length) {
+    lines.push(`**Redes sociales:**`)
+    contact.socials.forEach(s => {
+      if (typeof s === 'object' && s.network && s.url) {
+        lines.push(`- ${s.network}: ${s.url}`)
+      }
+    })
+  }
+  if (contact.primarySocial) lines.push(`**Red principal:** ${contact.primarySocial}`)
+  lines.push(``)
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 9. ASSETS
+  // ═══════════════════════════════════════════════════════════════════════════
+  lines.push(`## 9. Assets del Cliente`)
+  lines.push(``)
+  if (visual.logo?.available) {
+    lines.push(`✅ **Logo disponible** (${visual.logo.format || 'formato no especificado'})`)
+  } else {
+    lines.push(`❌ **Logo no disponible** — El sitio debe funcionar con un wordmark tipográfico.`)
+  }
+  if (assets.folderReady) {
+    lines.push(`✅ **Carpeta de assets lista**`)
+  } else {
+    lines.push(`❌ **Carpeta de assets no lista** — El sitio debe funcionar con imágenes de reemplazo hasta que el cliente envíe las suyas.`)
+  }
+  if (Array.isArray(assets.missing) && assets.missing.length) {
+    lines.push(`**Faltan:** ${assets.missing.join(', ')}`)
+  }
+  lines.push(``)
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 10. DIRECTRICES CREATIVAS
+  // ═══════════════════════════════════════════════════════════════════════════
+  lines.push(`## 10. Directrices Creativas para Stitch`)
+  lines.push(``)
+  lines.push(`**Stitch, esto es lo que necesito que tengas en cuenta al diseñar:**`)
+  lines.push(``)
+  lines.push(`### Prioridades generales`)
+  lines.push(`1. **Mobile-first** — El diseño debe funcionar perfecto en celular.`)
+  lines.push(`2. **Conversión** — Cada página debe tener un objetivo claro y un CTA visible.`)
+  lines.push(`3. **Confianza** — Señales de confianza: pagos seguros, envíos, garantía, testimonios.`)
+  lines.push(`4. **Identidad única** — El diseño debe sentirse propio de ${business.name || 'este negocio'}, no genérico.`)
+  lines.push(`5. **Velocidad** — Diseño ligero, sin elementos que ralenticen la carga.`)
+  lines.push(``)
+
+  lines.push(`### Qué debe tener cada página (a criterio creativo de Stitch)`)
+  lines.push(`- **Header:** Logo, navegación, ${hasCheckout ? 'carrito con badge, ' : ''}CTA principal. Mobile: menú hamburguesa.`)
+  lines.push(`- **Footer:** Contacto, links de navegación, legales, redes, crédito "Desarrollado por SitioHoy" con link a sitiohoy.com.ar.`)
+  lines.push(`- **Home:** Hero que transmita la esencia del negocio. ${!hasCheckout ? 'CTA a WhatsApp.' : 'CTA a comprar o ver catálogo.'} Productos o categorías destacadas. Señales de confianza.`)
+  lines.push(`- **Catálogo:** Grid de productos. Filtros por categoría. Fotos claras. Precios visibles.`)
+  lines.push(`- **Producto:** Galería de imágenes. Nombre, descripción, precio. ${catalog.hasVariants ? 'Variantes. ' : ''}Botón: "${!hasCheckout ? 'Consultar por WhatsApp' : 'Agregar al carrito'}".`)
+  if (hasCheckout) {
+    lines.push(`- **Carrito:** Lista de productos. Control de cantidades. Resumen de totales. Botón al checkout.`)
+    lines.push(`- **Checkout:** 4 pasos (datos, envío, pago, confirmación). Barra de progreso. Resumen del pedido.`)
+    lines.push(`- **Seguimiento:** Timeline del estado del pedido. Detalles.`)
+  }
+  lines.push(`- **Sobre Nosotros:** Historia del negocio. Valores o equipo. CTA a contacto.`)
+  lines.push(`- **Contacto:** Información de contacto. ${pages.contact ? 'Formulario.' : ''} Redes sociales.`)
+  lines.push(`- **FAQ:** Preguntas y respuestas. CTA a contacto si no encuentra respuesta.`)
+  lines.push(`- **404 / Error:** Mensaje amigable. Links útiles.`)
+  lines.push(``)
+
+  lines.push(`### Qué evitar`)
+  lines.push(`- ❌ Gradientes violeta/azul/rosa genéricos sin relación con la marca`)
+  lines.push(`- ❌ Glassmorphism sin propósito funcional`)
+  lines.push(`- ❌ Bordes redondeados excesivos (> 20px) en contenedores grandes`)
+  lines.push(`- ❌ Animaciones de scroll-reveal en TODOS los elementos sin criterio`)
+  lines.push(`- ❌ Hero genérico: gente sonriendo + subtítulo + botón sobre stock photo`)
+  lines.push(`- ❌ Inter / Roboto / Lato por defecto sin justificación`)
+  lines.push(`- ❌ Íconos flotantes decorativos sin función`)
+  lines.push(`- ❌ Cards con sombras excesivas o bordes múltiples`)
+  lines.push(`- ❌ Texto que se corta o pisa otros elementos`)
+  lines.push(`- ❌ UI dominada por un solo color sin contraste real`)
+  lines.push(`- ❌ Mismo diseño genérico que cualquier otra tienda`)
+  lines.push(``)
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 11. ACCESIBILIDAD
+  // ═══════════════════════════════════════════════════════════════════════════
+  lines.push(`## 11. Requisitos de Accesibilidad`)
+  lines.push(``)
+  lines.push(`- Contraste mínimo 4.5:1 para texto body`)
+  lines.push(`- Touch targets mínimo 44x44px`)
+  lines.push(`- Focus states visibles en todos los elementos interactivos`)
+  lines.push(`- Alt text en todas las imágenes`)
+  lines.push(`- Labels asociados a todos los inputs de formularios`)
+  lines.push(`- Respetar prefers-reduced-motion — sin animaciones para quienes las desactiven`)
+  lines.push(``)
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 12. INSTRUCCIONES FINALES
+  // ═══════════════════════════════════════════════════════════════════════════
+  lines.push(`## 12. Instrucciones Finales para Stitch`)
+  lines.push(``)
+  lines.push(`**Stitch, este es tu brief. Ahora te toca a vos:**`)
+  lines.push(``)
+  lines.push(`1. Diseñá un sitio web único y memorable para **${business.name || 'este negocio'}**.`)
+  lines.push(`2. Usá los colores de marca como guía, pero proponé una paleta completa que funcione.`)
+  lines.push(`3. Elegí tipografías que reflejen el tono **${tone}** y el estilo **${style}**.`)
+  lines.push(`4. Diseñá mobile-first: empezá por 375px y escalá a desktop.`)
+  lines.push(`5. Cada página debe tener un propósito claro y un CTA visible.`)
+  lines.push(`6. El sitio debe transmitir **${audience.desiredFeeling || 'confianza y profesionalismo'}**.`)
+  lines.push(`7. No copies templates genéricos — hacé algo que sea propio de este negocio.`)
+  lines.push(`8. Recordá: el público es **${audience.profile || 'variado'}**, así que pensá en ellos al diseñar.`)
+  lines.push(``)
+  lines.push(`**Cuando termines, avisame para que revise el diseño y después implemente el código.**`)
+  lines.push(``)
+  lines.push(`---`)
+  lines.push(``)
+  lines.push(`**Documento generado por SitioHoy**`)
+  lines.push(`**ID del proyecto Stitch:** [COMPLETAR DESPUÉS DE CREAR EN STITCH]`)
+  lines.push(``)
 
   return lines.join('\n')
 }
