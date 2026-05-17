@@ -34,7 +34,7 @@ Todos los sitios comparten el mismo stack base (Next.js + Supabase). Las integra
 - `next/image` siempre — nunca `<img>` nativo
 - `next/font` siempre — nunca `<link>` externo para fuentes
 - `@supabase/ssr` en server — `createBrowserClient` solo en client components
-- `unstable_cache` + `revalidateTag()` — nunca `revalidatePath('/')` global
+- `unstable_cache` + `revalidateTag(tag, 'default')` — nunca `revalidatePath('/')` global
 - `error.tsx` y `not-found.tsx` en cada segmento de ruta importante
 - `loading.tsx` con skeleton en rutas de datos pesados
 - Mobile-first siempre — diseñar desde 375px hacia arriba

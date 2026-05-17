@@ -7,6 +7,9 @@ tipo: integración — solo Plan Empresa (Módulo 4, si activado en onboarding)
 # Integración Envia.com
 
 Credencial: `tenants.envia_access_token` (no en `.env`).
+Para productos físicos, usar `products.weight_grams` y dimensiones del producto.
+Si el producto no tiene datos propios, usar los defaults de `sitiohoy.config.json`
+y registrarlo como estimado en tracking.
 
 ```env
 # Solo la URL base en .env (ambiente test vs prod)
@@ -99,7 +102,7 @@ export const getShippingRates = async (destination: {
     body: JSON.stringify({
       origin,
       destination: dest,
-      packages: [{ content: 'Productos', amount: 1, type: 'box', weight: 1,
+      packages: [{ content: 'Productos', amount: 1, type: 'box', weight: 0.5,
         dimensions: { length: 30, width: 20, height: 15 } }],
       shipment: { carrier: 'correoargentino', type: 1 },  // ← string, no array
       settings: { currency: 'ARS' },
@@ -129,6 +132,7 @@ const SHIPPING_FALLBACK = {
 
 - [ ] `envia_access_token` configurado en tabla `tenants`
 - [ ] `origin_*` fields configurados en `tenants`
+- [ ] Productos físicos tienen `weight_grams` y dimensiones, o defaults estimados registrados
 - [ ] Cotización retorna tarifas reales con un código postal de prueba
 - [ ] `toProvinceCode()` aplicado en origin y destination antes de la llamada
 - [ ] Fallback funciona si la integración no está configurada

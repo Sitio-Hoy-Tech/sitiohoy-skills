@@ -97,7 +97,7 @@ core/15-deploy-vercel.md
 
 - Todo lo del Plan Emprendimiento
 - Productos ilimitados
-- Envíos automatizados: Correo Argentino directo (sin costo extra, pre-registro automático) o Envia.com (etiquetas PDF, multicarrier — requiere cuenta propia)
+- Envíos automatizados: Correo Argentino directo (pre-registro automático con usuario MiCorreo propio del cliente) o Envia.com (etiquetas PDF, multicarrier — requiere cuenta propia)
 - Umami con tracking de conversiones y eventos de e-commerce
 - Schema.org avanzado con Review y FAQPage
 - SEO para AI Overviews completo

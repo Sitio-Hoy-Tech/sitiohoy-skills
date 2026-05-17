@@ -195,7 +195,7 @@ export const provisionTenant = async (email: string, password: string, tenantId:
 ## Checklist RLS ✅
 
 - [ ] `public.get_tenant_id()` function creada
-- [ ] RLS habilitado en todas las tablas: products, product_images, product_variants, categories, subcategories, orders, order_items, coupons, shipping_zones, contact_messages, order_events, payment_events, user_tenants, tenants
+- [ ] RLS habilitado en todas las tablas: products, product_images, product_variants, categories, subcategories, orders, order_items, coupons, shipping_zones, contact_messages, order_events, payment_events, platform_config, user_tenants, tenants
 - [ ] Políticas CRUD creadas para cada tabla
 - [ ] Bucket `public_assets` creado con políticas de storage
 - [ ] Usuario admin provisionado con `tenant_id` en `app_metadata`

@@ -20,14 +20,17 @@ Antes de arrancar, necesito responder unas preguntas rápidas sobre el alcance d
 1. ¿Qué plan vas a contratar?
    [ ] Esencial ($25.000/mes) — catálogo de productos/servicios + contacto por WhatsApp
    [ ] Emprendimiento ($37.000/mes) — tienda con MercadoPago + envíos con precios fijos
-   [ ] Empresa ($65.000/mes) — tienda completa con envíos automatizados por Correo Argentino
+   [ ] Empresa ($65.000/mes) — tienda completa con envíos automatizados por Correo Argentino o Envia.com
 
 2. ¿Tenés cuenta de MercadoPago activa para cobros?
    (requerido para Emprendimiento y Empresa)
    [ ] Sí  [ ] No, hay que crearla
 
-3. (Solo Empresa) ¿Querés envíos automatizados con Correo Argentino vía Envia.com?
-   [ ] Sí  [ ] No, voy a configurarlo después
+3. (Solo Empresa) ¿Cómo querés gestionar envíos?
+   [ ] Correo Argentino directo con usuario MiCorreo propio del cliente
+   [ ] Envia.com con cuenta propia del cliente + token API
+   [ ] Precios fijos por zona
+   [ ] Solo retiro / sin envíos
 
 4. ¿Necesitás emails automáticos al comprador? (confirmación de compra, cambio de estado)
    [ ] Sí (recomendado)  [ ] No por ahora
@@ -72,6 +75,7 @@ CONFIG TÉCNICA — [Nombre del negocio]
 Plan: [esencial | emprendimiento | empresa]
 MercadoPago: [sí/no]
 Envia.com: [sí/no]
+Correo Argentino: [sí/no]
 Emails Resend: [sí/no]
 Dominio: [url o "por comprar"]
 Editor: [claude-code | cursor | otro]
@@ -85,6 +89,7 @@ MCP AIDesigner: [activo | inactivo → modo manual]
 |---|---|---|---|
 | MercadoPago | ❌ | ✅ | ✅ |
 | Envíos fijos por zona | ❌ | ✅ | ❌ |
+| Correo Argentino | ❌ | ❌ | ✅ (si activó y tiene usuario MiCorreo propio) |
 | Envia.com | ❌ | ❌ | ✅ (si activó) |
 | Resend emails | ❌ | ✅ (si activó) | ✅ (si activó) |
 | Umami Analytics | ❌ | ✅ básico | ✅ avanzado |
@@ -92,7 +97,8 @@ MCP AIDesigner: [activo | inactivo → modo manual]
 
 ### Fallback si MCP Supabase no está activo
 
-El modelo generará los scripts SQL en archivos `.sql` en la carpeta `supabase/migrations/` del proyecto. El cliente los ejecuta manualmente desde el SQL Editor de Supabase Dashboard.
+El modelo generará los scripts SQL en archivos `.sql` en la carpeta `supabase/migrations/` del proyecto.
+Aplicar con Supabase CLI (`supabase link` + `supabase db push`). No usar SQL Editor salvo bloqueo documentado.
 
 ### Fallback si AIDesigner MCP no está activo
 

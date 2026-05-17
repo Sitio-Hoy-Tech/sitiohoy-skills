@@ -3,45 +3,19 @@
 # Instala el contexto del sistema en la carpeta donde estás parado.
 #
 # Uso:
-#   ./install.sh                    # versión más reciente (main)
-#   ./install.sh --version v1.2.0   # versión específica
-#   ./install.sh --rollback         # menú para elegir versión anterior
-#   ./install.sh --list-versions    # listar versiones disponibles
+#   ./install.sh
 set -e
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_DIR="$(pwd)"
 CREDS_FILE="$HOME/.sitiohoy/credentials.env"
 GITHUB_REPO="Sitio-Hoy-Tech/sitiohoy-skills"
-INSTALL_VERSION=""
-TEMP_CLONE=""
-
-# ── Parsear flags ─────────────────────────────────────────────────────────────
-for arg in "$@"; do
-  case "$arg" in
-    --version=*) INSTALL_VERSION="${arg#*=}" ;;
-    --version)   shift; INSTALL_VERSION="$1" ;;
-    --rollback)  INSTALL_VERSION="__pick__" ;;
-    --list-versions)
-      echo ""
-      echo "  Versiones disponibles en GitHub:"
-      curl -fsSL "https://api.github.com/repos/${GITHUB_REPO}/tags" 2>/dev/null \
-        | grep '"name"' | sed 's/.*"name": "\(.*\)".*/    \1/' \
-        || echo "  (no se pudo conectar a GitHub)"
-      echo ""
-      exit 0
-      ;;
-  esac
-  shift 2>/dev/null || true
-done
 
 # ── Colores ───────────────────────────────────────────────────────────────────
 CY=$'\033[38;2;34;163;91m'
 GY=$'\033[38;2;120;120;120m'
 BD=$'\033[1m'
 RS=$'\033[0m'
-HL=$'\033[48;2;34;163;91m\033[38;2;255;255;255m'
-NM=$'\033[38;2;180;180;180m'
 YELLOW=$'\033[1;33m'
 
 info()    { printf "  %s→%s %s\n" "$CY" "$RS" "$1"; }
@@ -56,13 +30,13 @@ print_logo() {
   local r=$'\033[0m'
   printf "\n"
   printf "  %s%s                   %s\n" "$g" "$w" "$r"
-  printf "  %s%s   ██████████       %s\n" "$g" "$w" "$r"
-  printf "  %s%s   ██      ██       %s\n" "$g" "$w" "$r"
-  printf "  %s%s   ██               %s\n" "$g" "$w" "$r"
-  printf "  %s%s   ████████         %s\n" "$g" "$w" "$r"
-  printf "  %s%s          ██        %s\n" "$g" "$w" "$r"
-  printf "  %s%s   ██      ██       %s\n" "$g" "$w" "$r"
-  printf "  %s%s   ██████████       %s\n" "$g" "$w" "$r"
+  printf "  %s%s   ██████████      %s\n" "$g" "$w" "$r"
+  printf "  %s%s   ██      ██      %s\n" "$g" "$w" "$r"
+  printf "  %s%s   ██              %s\n" "$g" "$w" "$r"
+  printf "  %s%s   ████████        %s\n" "$g" "$w" "$r"
+  printf "  %s%s          ██       %s\n" "$g" "$w" "$r"
+  printf "  %s%s   ██      ██      %s\n" "$g" "$w" "$r"
+  printf "  %s%s   ██████████      %s\n" "$g" "$w" "$r"
   printf "  %s%s                   %s\n" "$g" "$w" "$r"
   printf "\n  %s%sSitioHoy%s  AI Context Installer\n\n" "$t" "$BD" "$r"
 }
@@ -70,79 +44,120 @@ print_logo() {
 print_logo
 printf "  %s📁 Destino:%s %s%s%s\n\n" "$GY" "$RS" "$BD" "$TARGET_DIR" "$RS"
 
-# ── read_key — compatible Linux / macOS / WSL ─────────────────────────────────
-# Lee una tecla y devuelve: UP / DOWN / ENTER / ESC
-# FIX Linux: leer la secuencia de escape en un solo read de 2 bytes
-# en lugar de dos reads separados con timeout, que en algunos sistemas
-# Linux corta la ejecución al presionar flechas.
-# ── Menú por número ───────────────────────────────────────────────────────────
-# Uso: run_menu "Título" item1 item2 ...
-# Devuelve el índice en MENU_RESULT
+# ── Menú interactivo via Node.js ──────────────────────────────────────────────
+# Node tiene soporte nativo de flechas en todos los sistemas.
+# Escribe el script a un archivo temp, lo ejecuta, y lee el índice devuelto.
 MENU_RESULT=0
-run_menu() {
-  local title="$1"; shift
-  local options=("$@")
-  local total=${#options[@]}
+MENU_SCRIPT="/tmp/sitiohoy-menu-$$.mjs"
 
-  printf "  %s╭─────────────────────────────────────╮%s\n" "$CY" "$RS"
-  printf "  %s│%s  %-37s%s│%s\n" "$CY" "$RS" "$title" "$CY" "$RS"
-  printf "  %s├─────────────────────────────────────┤%s\n" "$CY" "$RS"
-  for i in "${!options[@]}"; do
-    printf "  %s│%s  %s%d)%s %-33s%s│%s\n" "$CY" "$RS" "$HL" "$((i+1))" "$RS" "${options[$i]}" "$CY" "$RS"
-  done
-  printf "  %s╰─────────────────────────────────────╯%s\n" "$CY" "$RS"
+cat > "$MENU_SCRIPT" << 'NODESCRIPT'
+import readline from 'readline'
 
-  local choice=""
-  while true; do
-    printf "  %sElegí un número [1-%d]:%s " "$GY" "$total" "$RS"
-    read -r choice
-    if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$total" ]; then
-      break
-    fi
-    printf "  %sOpción inválida, ingresá un número entre 1 y %d%s\n" "$YELLOW" "$total" "$RS"
-  done
+const [,, title, ...options] = process.argv
+if (!options.length) { process.stdout.write('0\n'); process.exit(0) }
 
-  MENU_RESULT=$((choice - 1))
-  printf "  %s✓%s %s%s%s\n\n" "$CY" "$RS" "$BD" "${options[$MENU_RESULT]}" "$RS"
+const CY  = '\x1b[38;2;34;163;91m'
+const GY  = '\x1b[38;2;120;120;120m'
+const BD  = '\x1b[1m'
+const RS  = '\x1b[0m'
+const SEL = '\x1b[1m\x1b[38;2;34;163;91m'
+
+let current = 0
+const total = options.length
+
+// Ancho dinámico: el más largo entre título y opciones, mínimo 30
+const innerW = Math.max(title.length, ...options.map(o => o.length + 4), 30)
+const bar = '─'.repeat(innerW + 2)
+
+function draw() {
+  process.stderr.write(`  ${CY}╭${bar}╮${RS}\n`)
+  process.stderr.write(`  ${CY}│${RS}  ${BD}${title.padEnd(innerW)}${RS}  ${CY}│${RS}\n`)
+  process.stderr.write(`  ${CY}├${bar}┤${RS}\n`)
+  for (let i = 0; i < options.length; i++) {
+    const label = options[i].padEnd(innerW - 2)
+    if (i === current) {
+      process.stderr.write(`  ${CY}│${RS}  ${SEL}▶ ${label}${RS}  ${CY}│${RS}\n`)
+    } else {
+      process.stderr.write(`  ${CY}│${RS}    ${label}  ${CY}│${RS}\n`)
+    }
+  }
+  process.stderr.write(`  ${CY}╰${bar}╯${RS}\n`)
+  process.stderr.write(`  ${GY}↑↓ navegar · Enter confirmar${RS}\n`)
 }
 
-# ── Versión ───────────────────────────────────────────────────────────────────
-cleanup_temp() { [ -n "$TEMP_CLONE" ] && rm -rf "$TEMP_CLONE"; }
-trap 'printf "\033[?25h"; cleanup_temp' EXIT
+function erase() {
+  const lines = total + 5
+  for (let i = 0; i < lines; i++) {
+    process.stderr.write('\x1b[A\x1b[2K')
+  }
+}
 
-if [ "$INSTALL_VERSION" = "__pick__" ]; then
-  TAGS_JSON=$(curl -fsSL "https://api.github.com/repos/${GITHUB_REPO}/tags" 2>/dev/null || echo "[]")
-  TAGS=()
-  while IFS= read -r line; do
-    [[ "$line" =~ \"name\":\ *\"([^\"]+)\" ]] && TAGS+=("${BASH_REMATCH[1]}")
-  done <<< "$TAGS_JSON"
+readline.emitKeypressEvents(process.stdin)
+if (process.stdin.isTTY) process.stdin.setRawMode(true)
 
-  if [ ${#TAGS[@]} -eq 0 ]; then
-    warn "No se encontraron versiones publicadas. Usando main."
-    INSTALL_VERSION=""
-  else
-    run_menu "¿Qué versión instalamos?" "${TAGS[@]}" "main (última)"
-    chosen="${TAGS[$MENU_RESULT]:-main}"
-    [[ "$chosen" == main* ]] && INSTALL_VERSION="" || INSTALL_VERSION="$chosen"
-  fi
-fi
+// Ocultar cursor
+process.stderr.write('\x1b[?25l')
+draw()
 
-if [ -n "$INSTALL_VERSION" ]; then
+process.stdin.on('keypress', (_, key) => {
+  if (!key) return
+  if (key.name === 'up') {
+    erase()
+    current = (current - 1 + total) % total
+    draw()
+  } else if (key.name === 'down') {
+    erase()
+    current = (current + 1) % total
+    draw()
+  } else if (key.name === 'return' || key.name === 'enter') {
+    erase()
+    process.stderr.write(`  \x1b[38;2;34;163;91m✓\x1b[0m ${BD}${options[current]}${RS}\n\n`)
+    process.stderr.write('\x1b[?25h')  // Mostrar cursor
+    process.stdout.write(`${current}\n`)
+    process.exit(0)
+  } else if (key.name === 'escape' || (key.ctrl && key.name === 'c')) {
+    process.stderr.write('\x1b[?25h')
+    process.exit(1)
+  }
+})
+NODESCRIPT
+
+run_menu() {
+  local title="$1"; shift
+  local opts=("$@")
+  # stderr va directo a la terminal (menú visual), stdout captura el índice elegido
+  local result
+  result=$(node "$MENU_SCRIPT" "$title" "${opts[@]}" 2>/dev/tty) || { printf '\033[?25h'; exit 1; }
+  MENU_RESULT=$result
+}
+
+cleanup_all() {
+  printf '\033[?25h'
+  rm -f "$MENU_SCRIPT"
+  [ -n "$TEMP_CLONE" ] && rm -rf "$TEMP_CLONE"
+}
+TEMP_CLONE=""
+trap cleanup_all EXIT
+
+# ── Obtener última versión desde GitHub ───────────────────────────────────────
+if [ "$REPO_DIR" != "$(pwd)" ]; then
+  true  # ejecutado desde el repo local
+else
   TEMP_CLONE="$(mktemp -d)"
-  info "Descargando versión ${INSTALL_VERSION}..."
-  URL="https://github.com/${GITHUB_REPO}/archive/refs/tags/${INSTALL_VERSION}.tar.gz"
+  info "Descargando versión más reciente..."
+  URL="https://github.com/${GITHUB_REPO}/archive/refs/heads/main.tar.gz"
   if curl -fsSL "$URL" | tar -xz -C "$TEMP_CLONE" --strip-components=1 2>/dev/null; then
     REPO_DIR="$TEMP_CLONE"
-    success "Versión ${INSTALL_VERSION} lista."
+    success "Última versión lista."
   else
-    warn "No se pudo clonar la versión ${INSTALL_VERSION}. Usando instalación local."
+    warn "No se pudo conectar a GitHub. Usando instalación local."
     rm -rf "$TEMP_CLONE"; TEMP_CLONE=""
   fi
 fi
 
-# ── Elegir IA — solo las soportadas actualmente ───────────────────────────────
+# ── Elegir IA ─────────────────────────────────────────────────────────────────
 AI_OPTIONS=(
-  "Claude Code   (.claude/skills/ + CLAUDE.md)"
+  "Claude Code   (CLAUDE.md + .claude/skills/)"
   "OpenAI Codex  (AGENTS.md + .agents/skills/)"
   "OpenCode      (AGENTS.md + .opencode/skills/)"
   "Todas"
@@ -250,7 +265,6 @@ install_claude() {
   mkdir -p "$skills_dir"
   rsync -a --delete "$REPO_DIR/skills/" "$skills_dir/"
 
-  # Crear CLAUDE.md si no existe, o agregar bloque si falta
   touch "$claude_md"
   if ! grep -q "SITIOHOY-CONTEXT-START" "$claude_md" 2>/dev/null; then
     cat >> "$claude_md" <<CLAUDEMD
@@ -266,9 +280,6 @@ CLAUDEMD
 }
 
 install_codex() {
-  # OpenAI Codex lee AGENTS.md y directorio .agents/
-  # Skills se copian para referencia interna — Codex no las ejecuta como Claude,
-  # pero el agente puede leerlas como contexto adicional.
   local skills_dir="$TARGET_DIR/.agents/skills"
   local agents_md="$TARGET_DIR/AGENTS.md"
 
@@ -276,7 +287,6 @@ install_codex() {
   rsync -a --delete "$REPO_DIR/skills/" "$skills_dir/"
   generate_context_block > "$agents_md"
 
-  # Agregar índice de skills al final de AGENTS.md para que Codex las descubra
   cat >> "$agents_md" <<'SKILLINDEX'
 
 ## Skills disponibles
@@ -298,8 +308,6 @@ SKILLINDEX
 }
 
 install_opencode() {
-  # OpenCode lee AGENTS.md como contexto de proyecto.
-  # También soporta carpeta .opencode/ para configuración local.
   local skills_dir="$TARGET_DIR/.opencode/skills"
   local agents_md="$TARGET_DIR/AGENTS.md"
 
@@ -307,7 +315,6 @@ install_opencode() {
   rsync -a --delete "$REPO_DIR/skills/" "$skills_dir/"
   generate_context_block > "$agents_md"
 
-  # Agregar índice de skills al final
   cat >> "$agents_md" <<'SKILLINDEX'
 
 ## Skills disponibles

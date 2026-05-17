@@ -25,7 +25,9 @@ for (const file of codeFiles) {
   const rel = path.relative(root, file)
   const text = await readFile(file, 'utf8')
   if (/<img[\s>]/.test(text)) add('error', 'Usar next/image en lugar de <img>.', rel)
+  if (/<select[\s>]/.test(text)) add('error', 'No usar <select> nativo. Usar dropdown custom con Controller de react-hook-form.', rel)
   if (/revalidatePath\s*\(\s*['"]\//.test(text)) add('error', 'No usar revalidatePath global. Usar revalidateTag.', rel)
+  if (/revalidateTag\s*\(\s*[^,\n)]+\s*\)/.test(text)) add('error', "Next.js 16 requiere revalidateTag(tag, 'default').", rel)
   if (/SUPABASE_SERVICE_ROLE_KEY/.test(text) && /NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY/.test(text)) {
     add('error', 'Service role key no puede tener prefijo NEXT_PUBLIC_.', rel)
   }
@@ -39,6 +41,15 @@ for (const file of codeFiles) {
   // Webhook MP sin verificación de firma
   if (/webhooks\/mercadopago/.test(rel) && !/MP_WEBHOOK_SECRET/.test(text)) {
     add('error', 'Webhook de MercadoPago sin verificación de firma (MP_WEBHOOK_SECRET). Ver integraciones/mercadopago.md.', rel)
+  }
+  if (/console\.log\s*\(/.test(text) && !rel.startsWith('scripts/')) {
+    add('warning', 'Remover console.log/debug antes de deploy.', rel)
+  }
+  if (/app\/.*productos/.test(rel) && /dynamic\s*=\s*['"]force-dynamic['"]/.test(text)) {
+    add('error', 'No usar dynamic = force-dynamic en catálogo. Usar ISR on-demand.', rel)
+  }
+  if (/app\/.*productos/.test(rel) && /revalidate\s*=\s*\d+/.test(text)) {
+    add('error', 'No usar revalidate = N en catálogo editable. Usar ISR on-demand.', rel)
   }
 }
 

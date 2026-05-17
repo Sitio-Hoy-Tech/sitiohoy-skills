@@ -10,6 +10,8 @@ tipo: core — consultar en Módulo 0 al configurar el proyecto y antes de cualq
 
 > Las credenciales de cada cliente (MercadoPago, Resend, Envia.com) **NO van en `.env`**.
 > Viven en la tabla `tenants` y se leen en runtime con `getTenantConfig()`.
+> Las credenciales de acceso de plataforma para Correo Argentino viven en `platform_config`;
+> el `customer_id` específico de cada negocio vive en `tenants.correo_argentino_customer_id`.
 > `.env` solo tiene infraestructura: Supabase, URL del sitio, y el ID del tenant activo.
 
 ### ¿Por qué?
@@ -53,13 +55,26 @@ Estas se obtienen llamando `getTenantConfig(tenantId)` en el server:
 
 | Campo en `tenants` | Uso |
 |---|---|
+| `url` | URL pública del sitio para triggers ISR Supabase |
+| `revalidation_secret` | Secret único por tenant para `/api/revalidate` |
 | `mp_access_token` | Crear preferencias y procesar pagos en MercadoPago |
 | `mp_public_key` | Inicializar MercadoPago Bricks en el cliente |
 | `resend_api_key` | Enviar emails transaccionales con Resend |
+| `contact_email` | Email destino del negocio para formularios de contacto |
 | `envia_access_token` | Cotizar y generar guías en Envia.com |
+| `correo_argentino_customer_id` | Customer ID MiCorreo específico del negocio |
 | `umami_url` | URL del script de Umami Analytics |
 | `umami_website_id` | Website ID de Umami Analytics |
 | `origin_name/phone/address/city/state/postal_code` | Datos de origen para cotización Envia.com |
+
+Estas se obtienen desde `platform_config` con service role, nunca desde `.env`:
+
+| Campo en `platform_config` | Uso |
+|---|---|
+| `correo_argentino_user` | Usuario MiCorreo de la plataforma |
+| `correo_argentino_password` | Password MiCorreo de la plataforma |
+| `correo_argentino_token` | Token MiCorreo cacheado |
+| `correo_argentino_token_expires_at` | Vencimiento del token |
 
 ---
 
@@ -79,9 +94,11 @@ export const getTenantConfig = unstable_cache(
     const { data, error } = await supabase
       .from('tenants')
       .select(`
-        id, name, slug, plan, status, url,
+        id, name, slug, plan, status, url, revalidation_secret,
         mp_access_token, mp_public_key,
-        resend_api_key, envia_access_token, umami_url, umami_website_id,
+        resend_api_key, contact_email, envia_access_token,
+        correo_argentino_customer_id,
+        umami_url, umami_website_id,
         origin_name, origin_phone, origin_address,
         origin_city, origin_state, origin_postal_code
       `)
@@ -92,7 +109,7 @@ export const getTenantConfig = unstable_cache(
     return data
   },
   ['tenant-config'],
-  { tags: [TAGS.TENANT] },  // ISR on-demand únicamente — invalidar con revalidateTag(TAGS.TENANT)
+  { tags: [TAGS.TENANT] },  // ISR on-demand únicamente — invalidar con revalidateTag(TAGS.TENANT, 'default')
 )
 ```
 
@@ -138,6 +155,7 @@ NEXT_PUBLIC_URL=
 MP_WEBHOOK_SECRET=
 NEXT_PUBLIC_UMAMI_WEBSITE_ID=
 ENVIA_API_URL=https://api-test.envia.com   # Cambiar a producción antes del deploy
+CA_API_URL=https://apitest.correoargentino.com.ar/micorreo/v1
 ```
 
 ---
@@ -158,11 +176,17 @@ NEXT_PUBLIC_URL=
 # MercadoPago (solo webhook secret — tokens en tabla tenants)
 MP_WEBHOOK_SECRET=
 
+# ISR local fallback — en producción preferir tenants.revalidation_secret
+REVALIDATION_SECRET=
+
 # Analytics
 NEXT_PUBLIC_UMAMI_WEBSITE_ID=
 
 # Envia.com (solo URL base — token en tabla tenants)
 ENVIA_API_URL=https://api-test.envia.com
+
+# Correo Argentino MiCorreo (solo URL base — credenciales en platform_config)
+CA_API_URL=https://apitest.correoargentino.com.ar/micorreo/v1
 ```
 
 > ⚠️ `.env.local` va en `.gitignore`. Commitear solo `.env.example`.
@@ -176,6 +200,7 @@ ENVIA_API_URL=https://api-test.envia.com
 - [ ] `NEXT_PUBLIC_TENANT_ID` es el UUID real de la fila en `tenants`
 - [ ] `MP_WEBHOOK_SECRET` configurado (Emprendimiento y Empresa)
 - [ ] `ENVIA_API_URL` apunta a `api-test.envia.com` en desarrollo
+- [ ] `CA_API_URL` apunta a `apitest.correoargentino.com.ar/micorreo/v1` en desarrollo si Correo Argentino está activo
 - [ ] Mismas variables cargadas en Vercel Dashboard antes del deploy
 - [ ] `.env.example` commiteado, `.env.local` en `.gitignore`
 - [ ] `getTenantConfig()` retorna datos correctos (verificar en consola del servidor)

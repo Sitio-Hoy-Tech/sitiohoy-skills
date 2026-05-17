@@ -1,8 +1,10 @@
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 const root = process.cwd()
+const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const configPath = path.join(root, 'sitiohoy.config.json')
 const briefPath = path.join(root, 'brief.md')
 
@@ -13,6 +15,8 @@ if (!existsSync(configPath) || !existsSync(briefPath)) {
 
 const config = JSON.parse(await readFile(configPath, 'utf8'))
 const brief = await readFile(briefPath, 'utf8')
+const intakePath = path.join(root, '.sitiohoy', 'intake.json')
+const intake = existsSync(intakePath) ? JSON.parse(await readFile(intakePath, 'utf8')) : {}
 
 const plan = config.plan ?? 'esencial'
 const project = config.project ?? 'SitioHoy'
@@ -43,6 +47,45 @@ const primaryColor = getBriefValue('Color principal')
 const secondaryColor = getBriefValue('Color secundario')
 const accentColor = getBriefValue('Color acento')
 const categories = getBriefValue('Categorias')
+
+const normalize = (value) => String(value ?? '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+
+const readTemplates = async () => {
+  const templatesPath = path.join(scriptDir, '..', 'data', 'templates', 'index.json')
+  if (!existsSync(templatesPath)) return []
+  const data = JSON.parse(await readFile(templatesPath, 'utf8'))
+  return data.templates ?? []
+}
+
+const visualReferences = [
+  getBriefValue('Referente visual'),
+  getBriefValue('Referentes visuales'),
+  getBriefValue('Competidores'),
+  ...(Array.isArray(intake.visualReferences) ? intake.visualReferences : []),
+].map((item) => String(item ?? '').trim()).filter(Boolean)
+
+const templates = await readTemplates()
+const industryText = normalize(`${industry} ${categories}`)
+const selectedTemplates = templates
+  .map((template) => {
+    const planScore = template.plan_fit?.includes(plan) ? 3 : 0
+    const industryScore = (template.industry ?? []).some((item) => industryText.includes(normalize(item))) ? 3 : 0
+    const ecommerceScore = hasCheckout && (template.tags ?? []).includes('ecommerce') ? 2 : 0
+    const serviceScore = !hasCheckout && (template.tags ?? []).some((tag) => ['landing', 'portfolio', 'blog'].includes(tag)) ? 1 : 0
+    return { template, score: planScore + industryScore + ecommerceScore + serviceScore }
+  })
+  .sort((a, b) => b.score - a.score)
+  .filter((item) => item.score > 0)
+  .slice(0, 3)
+  .map((item) => item.template)
+
+const fallbackTemplates = selectedTemplates.length ? selectedTemplates : templates.slice(0, 3)
+const inspirationBullets = fallbackTemplates.map((template) => (
+  `- ${template.name}: ${template.demo_url ?? template.preview_url}. Tomar estructura, ritmo visual y tratamiento de componentes; no copiar marca, textos ni paleta. ${template.description}`
+))
 
 const chooseFonts = () => {
   const text = `${industry} ${style} ${desiredFeeling}`.toLowerCase()
@@ -113,6 +156,7 @@ const commonRules = [
   '- Usar next/font, nunca links externos de fuentes.',
   '- Usar revalidateTag, nunca revalidatePath global.',
   '- Ejecutar npm run sitiohoy:validate antes de cerrar.',
+  '- En modulos visuales, revisar screenshots 375/390/768/1280/1920 y ejecutar sitiohoy:visual-audit con SITE_URL.',
 ]
 
 const write = async (file, content) => {
@@ -157,19 +201,19 @@ const moduleDetails = {
     gates: ['npm run build', 'npm run sitiohoy:validate'],
   },
   '1': {
-    read: ['.sitiohoy/design/design-direction.md', 'core/17-manejo-errores.md si falta template'],
+    read: ['.sitiohoy/design/inspiration-board.md', '.sitiohoy/design/design-direction.md', 'core/17-manejo-errores.md si falta template'],
     build: ['layout', 'header', 'footer', 'navegacion responsive', hasCheckout ? 'carrito/drawer base' : 'CTA WhatsApp'],
-    gates: ['npm run sitiohoy:validate'],
+    gates: ['npm run sitiohoy:validate', 'SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit'],
   },
   '2': {
-    read: ['.sitiohoy/design/layout-recipe.md', 'core/08-seo.md si falta metadata'],
+    read: ['.sitiohoy/design/inspiration-board.md', '.sitiohoy/design/layout-recipe.md', 'core/08-seo.md si falta metadata'],
     build: ['home', 'hero', 'categorias', 'destacados', 'propuesta de valor', 'CTA final'],
-    gates: ['npm run sitiohoy:validate'],
+    gates: ['npm run sitiohoy:validate', 'SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit'],
   },
   '3': {
-    read: ['core/07-isr-cache.md si faltan queries', 'core/08-seo.md si falta Schema.org'],
+    read: ['.sitiohoy/design/inspiration-board.md', 'core/07-isr-cache.md si faltan queries', 'core/08-seo.md si falta Schema.org'],
     build: [hasCheckout ? 'catalogo con agregar al carrito' : 'catalogo con WhatsApp', 'detalle producto', 'galeria', 'variantes', 'metadata'],
-    gates: ['npm run build', 'npm run sitiohoy:validate'],
+    gates: ['npm run build', 'npm run sitiohoy:validate', 'SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit'],
   },
   '4': {
     read: hasCheckout ? ['.sitiohoy/context/checkout-context.md'] : ['integraciones/formulario-contacto.md si hay pagina contacto'],
@@ -208,7 +252,7 @@ ${name} para ${project}, plan ${plan}.
 - \`brief.md\`
 - \`.sitiohoy/context/project-context.md\`
 - \`.sitiohoy/context/module-${number}.md\`
-${Number(number) >= 1 && Number(number) <= 3 ? '- `.sitiohoy/design/design-direction.md`' : ''}
+${Number(number) >= 1 && Number(number) <= 3 ? '- `.sitiohoy/design/inspiration-board.md`\n- `.sitiohoy/design/design-direction.md`\n- `.sitiohoy/design/layout-recipe.md`\n- `.sitiohoy/design/anti-slop-checklist.md`' : ''}
 
 ## Leer solo si hace falta
 
@@ -264,6 +308,7 @@ await write(path.join(outContext, 'deploy-context.md'), `
 
 - \`npm run build\`
 - \`npm run sitiohoy:qa\`
+- \`SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit\`
 - \`npm run sitiohoy:qa-report\`
 - Revisar variables en Vercel.
 - Confirmar dominio y SSL.
@@ -293,10 +338,38 @@ ${hasCheckout ? '- `.sitiohoy/context/checkout-context.md`' : ''}
 
 ## Diseño
 
+- \`.sitiohoy/design/inspiration-board.md\`
 - \`.sitiohoy/design/design-direction.md\`
 - \`.sitiohoy/design/layout-recipe.md\`
 - \`.sitiohoy/design/design-tokens.seed.json\`
 - \`.sitiohoy/design/anti-slop-checklist.md\`
+`)
+
+await write(path.join(outDesign, 'inspiration-board.md'), `
+# Inspiration Board - ${project}
+
+## Referencias del cliente
+
+${visualReferences.length ? visualReferences.map((item) => `- ${item}`).join('\n') : '- Sin referencias visuales explícitas en el brief.'}
+
+## Referencias curadas para consultar
+
+${inspirationBullets.length ? inspirationBullets.join('\n') : '- Sin referencias curadas disponibles.'}
+
+## Como usarlas
+
+- Mirar composición, densidad, jerarquía, ritmo de secciones, tratamiento de cards, navegación y estados.
+- Si una referencia es URL, abrirla y revisar mobile/desktop antes de diseñar.
+- No copiar textos, marca, paleta exacta ni estructura completa.
+- Para productos sin fotos del cliente, usar Unsplash relacionado al rubro/producto y evitar imágenes genéricas o oscuras.
+
+## Hipótesis visual inicial
+
+- Personalidad: ${desiredFeeling || tone || style || 'definir desde brief'}.
+- Hero: ${heroRecipe}
+- Catálogo: ${catalogRecipe}
+- Dispositivo prioritario: ${primaryDevice || 'mixed'}.
+- Calidad de fotos: ${photoQuality || 'sin definir'}.
 `)
 
 await write(path.join(outDesign, 'design-direction.md'), `
@@ -321,6 +394,13 @@ await write(path.join(outDesign, 'design-direction.md'), `
 - Secondary: ${secondaryColor || 'definir desde brief'}
 - Accent: ${accentColor || 'definir desde brief'}
 
+## Referencias de inspiración
+
+- Archivo obligatorio: \`.sitiohoy/design/inspiration-board.md\`.
+- Antes de crear componentes visuales, revisar referencias del cliente o las curadas.
+- Convertir las referencias en decisiones propias: estructura, ritmo, jerarquía y calidad visual.
+- Si no hay fotos del cliente, elegir imágenes de Unsplash específicas del rubro/producto.
+
 ## Hero
 
 ${heroRecipe}
@@ -336,6 +416,8 @@ ${catalogRecipe}
 - No usar cards con glassmorphism decorativo.
 - No usar tipografia por defecto sin intencion.
 - No meter texto visible explicando la UI.
+- No cerrar un modulo visual sin screenshots revisados en 375, 390, 768, 1280 y 1920 px.
+- La nota visual minima para entregar al cliente es 8/10; si alguna dimensión clave queda por debajo, iterar.
 `)
 
 await write(path.join(outDesign, 'layout-recipe.md'), `
@@ -347,6 +429,24 @@ await write(path.join(outDesign, 'layout-recipe.md'), `
 - Touch targets minimo 44px.
 - Header compacto y CTA visible.
 - Evitar overflow horizontal.
+- Ningun texto debe cortarse, pisarse o salirse del contenedor.
+- Las cards no deben cambiar de tamaño al hacer hover ni por labels largos.
+- El primer viewport debe mostrar marca/producto/rubro y dejar insinuada la siguiente seccion.
+
+## Viewports obligatorios
+
+- 375x812: mobile chico real; prioridad máxima si el brief dice mobile.
+- 390x844: iPhone común; revisar header, hero, cards y CTA.
+- 768x1024: tablet; evitar layouts desktop apretados.
+- 1280x900: desktop estándar; revisar densidad y composición.
+- 1920x1080: wide; evitar contenido perdido en el centro o hero demasiado alto.
+
+## Criterio de aceptación visual
+
+- Ejecutar \`SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit\`.
+- Revisar manualmente screenshots en \`.sitiohoy/qa/visual/\`.
+- Arreglar errores antes de cerrar: overflow horizontal, imágenes rotas, tap targets chicos, textos cortados, console errors.
+- Si el diseño se ve genérico, volver a \`.sitiohoy/design/inspiration-board.md\` y rehacer composición/tokens.
 
 ## Hero recomendado
 
@@ -399,16 +499,125 @@ await writeFile(path.join(outDesign, 'design-tokens.seed.json'), `${JSON.stringi
 await write(path.join(outDesign, 'anti-slop-checklist.md'), `
 # Anti Slop Checklist - ${project}
 
+- [ ] Inspiration board revisado antes de diseñar.
 - [ ] Hero específico del rubro y brief.
 - [ ] Paleta sale del brief, no de defaults violetas/azules.
 - [ ] Tipografias elegidas por personalidad.
 - [ ] Imagenes propias priorizadas.
+- [ ] Si faltan imagenes propias, Unsplash es especifico del producto/rubro y no stock generico.
 - [ ] Cards con funcion real.
 - [ ] Estados hover/focus/loading/empty/error.
 - [ ] Mobile 375px sin overflow.
+- [ ] Mobile 390px sin texto cortado ni CTAs apretados.
+- [ ] Tablet 768px sin layout roto.
+- [ ] Desktop 1280px y wide 1920px con composición cuidada.
+- [ ] Tap targets principales minimo 44px.
+- [ ] Contraste legible en hero, botones y cards.
+- [ ] No hay cards dentro de cards ni secciones flotantes decorativas.
+- [ ] No domina una sola familia de color sin contraste real.
+- [ ] Screenshots de \`.sitiohoy/qa/visual/\` revisados.
+- [ ] \`.sitiohoy/qa/visual-report.json\` queda OK.
+- [ ] Nota visual interna minima 8/10.
 - [ ] CTA principal coincide con plan: ${hasCheckout ? 'compra' : 'WhatsApp'}.
 - [ ] Schema y metadata no usan copy generico.
 `)
+
+// Write stitch-instructions.md
+const stitchInstructions = `# Instrucciones de Implementación desde Stitch
+
+## Flujo de trabajo
+1. Abrir el diseño con \`mcp__pencil__get_editor_state\`
+2. Capturar layout de cada página con \`mcp__pencil__snapshot_layout\`
+3. Extraer variables de diseño con \`mcp__pencil__get_variables\`
+4. Implementar componente por componente comparando con \`mcp__pencil__get_screenshot\`
+
+## Mapeo Stitch → Code
+| Stitch Property | CSS/Tailwind Equivalent |
+|---|---|
+| fill color | bg-[color] / background-color |
+| text color | text-[color] / color |
+| font-size | text-[size] / font-size |
+| padding | p-[n] / padding |
+| gap | gap-[n] / gap |
+| border-radius | rounded-[n] / border-radius |
+| opacity | opacity-[n] / opacity |
+
+## Reglas de Fidelidad
+- Cada componente debe coincidir con el diseño en ±2px
+- Colores exactos — no aproximar
+- Tipografía: mismo font-family, weight y size
+- Espaciado: respetar el sistema de spacing del diseño
+- Si Stitch usa 8px grid, implementar con múltiplos de 8
+
+## Verificación
+Después de implementar cada página:
+1. \`mcp__pencil__get_screenshot\` del diseño
+2. Screenshot del sitio en el mismo viewport
+3. Comparar visualmente
+4. Ajustar hasta match
+`
+await writeFile(path.join(outDesign, 'stitch-instructions.md'), stitchInstructions)
+
+// Write implementation-order.md
+const implOrder = `# Orden de Implementación Optimizado
+
+## Principio
+Cada módulo se implementa en orden de dependencia. No saltar módulos.
+Stitch design DEBE estar listo antes de Módulo 1.
+
+## Secuencia
+
+### Pre-implementación
+1. ✅ Briefing completado (intake.json, config, brief.md, design-brief-stitch.md)
+2. ✅ Context packs generados (.sitiohoy/context/, .sitiohoy/design/)
+3. ✅ Diseño creado en Stitch y aprobado
+4. ✅ Tokens extraídos de Stitch → tokens.css
+
+### Módulo 0 — Scaffold & Database
+- Next.js base + Supabase schema + QA scripts
+- Gate: \`npm run build\` + \`npm run sitiohoy:validate\`
+
+### Módulo 1 — Layout Base
+- Header, Footer, Nav, Cart Sidebar, Error boundaries
+- Dependencia: tokens.css, Stitch layout screenshots
+- Gate: validate + visual-audit
+
+### Módulo 2 — Home
+- Hero, Trust Signals, Featured Products, Testimonios
+- Dependencia: Módulo 1 (layout), assets del cliente
+- Gate: validate + visual-audit (5 viewports)
+
+### Módulo 3 — Catálogo
+- Grid, Filtros, Product Detail, Variantes, Related
+- Dependencia: Módulo 1 + datos en Supabase
+- Gate: validate + Lighthouse
+
+### Módulo 4 — Checkout ${hasCheckout ? '(ACTIVO)' : '(NO APLICA - Plan Esencial)'}
+- Cart, Multi-step, MercadoPago, Shipping, Tracking, Emails
+- Dependencia: Módulo 3 + credenciales MP
+- Gate: validate + e2e + test-mercadopago + pago de prueba
+
+### Módulo 5 — Páginas Complementarias
+- About, FAQ, Contact, Legal
+- Dependencia: Módulo 1
+- Gate: validate
+
+### Módulo 6 — SEO & Performance
+- Sitemap, robots.txt, Schema.org, meta tags, Lighthouse
+- Dependencia: Todos los módulos anteriores
+- Gate: validate + Lighthouse ≥90
+
+### Módulo 7 — Analytics & Deploy ${hasCheckout ? '(ACTIVO)' : '(PARCIAL)'}
+- Umami, Vercel deploy, domain, prod credentials, smoke tests
+- Dependencia: QA aprobado
+- Gate: qa-report + smoke tests + compra real (si checkout)
+
+## Estimación de Complejidad por Plan
+- **Esencial**: ~5 módulos, sin checkout ni analytics avanzado
+- **Emprendimiento**: ~7 módulos, checkout + envíos fijos
+- **Empresa**: ~8 módulos, checkout + envíos dinámicos + analytics
+`
+await writeFile(path.join(outContext, 'implementation-order.md'), implOrder)
 
 console.log('.sitiohoy/context/project-context.md')
 console.log('.sitiohoy/context/context-index.md')

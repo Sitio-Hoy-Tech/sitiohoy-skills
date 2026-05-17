@@ -15,9 +15,13 @@ Siempre guardar el lead en `contact_messages` para no perder consultas si Resend
 ## Instalación
 
 ```bash
-npm install zod react-hook-form @hookform/resolvers
+npm install zod@^3.24.0 react-hook-form @hookform/resolvers
 # react-hook-form y zod ya están si el plan tiene checkout — verificar antes de instalar
 ```
+
+> Con `@hookform/resolvers` v4 y Zod v4 se detectaron `ZodError` como
+> `unhandledRejection` en browser. Usar Zod v3 (`zod@^3.24.0`).
+> No existe la ruta `@hookform/resolvers/zod/v4` en la versión actual del paquete.
 
 ---
 
@@ -46,8 +50,9 @@ export type ContactFormData = z.infer<typeof contactSchema>
 // app/(public)/contacto/actions.ts
 'use server'
 import { z } from 'zod'
+import { Resend } from 'resend'
 import { contactSchema } from '@/lib/validations/contact'
-import { getResendClient } from '@/lib/resend/client'   // null si no está configurado
+import { getTenantConfig } from '@/lib/supabase/tenant'
 import { createServiceClient } from '@/lib/supabase/server'
 
 // Rate limiting simple por IP — sin paquetes externos
@@ -65,6 +70,10 @@ const escapeHtml = (value: string): string =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;')
 
+type ContactResult =
+  | { ok: true }
+  | { ok: false; error: string }
+
 const isRateLimited = (ip: string): boolean => {
   const now = Date.now()
   const entry = attempts.get(ip)
@@ -80,59 +89,103 @@ const isRateLimited = (ip: string): boolean => {
 export const sendContactForm = async (
   formData: z.infer<typeof contactSchema>,
   ip: string = 'unknown',
-): Promise<{ ok: boolean; error?: string }> => {
-  // Honeypot — rechazar silenciosamente si el campo oculto tiene contenido
-  if (formData.honeypot) return { ok: true }
+): Promise<ContactResult> => {
+  try {
+    // Honeypot — rechazar silenciosamente si el campo oculto tiene contenido
+    if (formData.honeypot) return { ok: true }
 
-  // Rate limit
-  if (isRateLimited(ip)) {
-    return { ok: false, error: 'Demasiados intentos. Esperá un momento.' }
-  }
+    if (isRateLimited(ip)) {
+      return { ok: false, error: 'Demasiados intentos. Esperá un momento.' }
+    }
 
-  // Validación
-  const parsed = contactSchema.safeParse(formData)
-  if (!parsed.success) {
-    return { ok: false, error: 'Datos inválidos.' }
-  }
+    const { name, email, phone, message } = contactSchema.parse(formData)
+    const tenantId = process.env.NEXT_PUBLIC_TENANT_ID!
+    const tenant = await getTenantConfig(tenantId)
+    const safeName = escapeHtml(name)
+    const safeEmail = escapeHtml(email)
+    const safePhone = phone ? escapeHtml(phone) : null
+    const safeMessage = escapeHtml(message).replace(/\n/g, '<br>')
+    const siteName = escapeHtml(tenant.name ?? process.env.NEXT_PUBLIC_SITE_NAME ?? 'SitioHoy')
+    const siteUrl = tenant.url ?? process.env.NEXT_PUBLIC_URL ?? 'https://sitiohoy.com.ar'
+    const city = escapeHtml(tenant.origin_city ?? '')
+    const primary = '#111827'
+    const from = `${siteName} <contacto@sitiohoy.com.ar>`
+    const supabase = createServiceClient()
 
-  const { name, email, phone, message } = parsed.data
-  const safeName = escapeHtml(name)
-  const safeEmail = escapeHtml(email)
-  const safePhone = phone ? escapeHtml(phone) : null
-  const safeMessage = escapeHtml(message).replace(/\n/g, '<br>')
-  const supabase = createServiceClient()
-
-  await supabase.from('contact_messages').insert({
-    tenant_id: process.env.NEXT_PUBLIC_TENANT_ID!,
-    name,
-    email,
-    phone: phone ?? null,
-    message,
-    source: 'contact_form',
-  })
-
-  // Intentar enviar email si Resend está configurado
-  const client = await getResendClient()
-  if (client) {
-    await client.resend.emails.send({
-      from: client.from,
-      to: client.from,   // se envía al mismo dominio del negocio
-      replyTo: email,
-      subject: `Nuevo mensaje de contacto — ${safeName}`,
-      html: `
-        <h2>Nuevo mensaje de contacto</h2>
-        <p><strong>Nombre:</strong> ${safeName}</p>
-        <p><strong>Email:</strong> <a href="mailto:${safeEmail}">${safeEmail}</a></p>
-        ${safePhone ? `<p><strong>Teléfono:</strong> ${safePhone}</p>` : ''}
-        <p><strong>Mensaje:</strong></p>
-        <blockquote style="border-left:3px solid #ccc;padding-left:1rem">${safeMessage}</blockquote>
-      `,
+    await supabase.from('contact_messages').insert({
+      tenant_id: tenantId,
+      name,
+      email,
+      phone: phone ?? null,
+      message,
+      source: 'contact_form',
     })
-  }
 
-  return { ok: true }
+    if (tenant.resend_api_key && tenant.contact_email) {
+      const resend = new Resend(tenant.resend_api_key)
+      const baseHtml = (content: string) => `
+        <div style="font-family:Arial,sans-serif;background:#f5f5f5;padding:24px;color:#111827">
+          <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden">
+            <div style="background:${primary};color:#ffffff;padding:20px 24px;font-size:20px;font-weight:700">${siteName}</div>
+            <div style="padding:24px">${content}</div>
+            <div style="padding:16px 24px;background:#f9fafb;color:#6b7280;font-size:13px">
+              <a href="${siteUrl}" style="color:${primary}">${siteUrl}</a>${city ? ` · ${city}` : ''}
+            </div>
+          </div>
+        </div>
+      `
+
+      await resend.emails.send({
+        from,
+        to: tenant.contact_email,
+        replyTo: email,
+        subject: `Nuevo mensaje de contacto — ${safeName}`,
+        headers: { 'X-Entity-Ref-ID': `contact-${tenantId}-${Date.now()}` },
+        html: baseHtml(`
+          <h1 style="margin:0 0 16px;font-size:22px">Nuevo mensaje de contacto</h1>
+          <p><strong>Nombre:</strong> ${safeName}</p>
+          <p><strong>Email:</strong> <a href="mailto:${safeEmail}">${safeEmail}</a></p>
+          ${safePhone ? `<p><strong>Teléfono:</strong> ${safePhone}</p>` : ''}
+          <p><strong>Mensaje:</strong></p>
+          <blockquote style="border-left:4px solid ${primary};padding-left:16px;margin:16px 0">${safeMessage}</blockquote>
+          <a href="mailto:${safeEmail}" style="display:inline-block;background:${primary};color:#ffffff;padding:12px 16px;border-radius:8px;text-decoration:none">Responder</a>
+        `),
+      })
+
+      await resend.emails.send({
+        from,
+        to: email,
+        replyTo: tenant.contact_email,
+        subject: `Recibimos tu consulta — ${siteName}`,
+        headers: { 'X-Entity-Ref-ID': `contact-confirmation-${tenantId}-${Date.now()}` },
+        html: baseHtml(`
+          <h1 style="margin:0 0 16px;font-size:22px">Recibimos tu consulta</h1>
+          <p>Hola ${safeName}, gracias por escribirnos. Te vamos a responder a la brevedad.</p>
+          <p><strong>Tu mensaje:</strong></p>
+          <blockquote style="border-left:4px solid ${primary};padding-left:16px;margin:16px 0">${safeMessage}</blockquote>
+          <a href="${siteUrl}" style="display:inline-block;background:${primary};color:#ffffff;padding:12px 16px;border-radius:8px;text-decoration:none">Volver al sitio</a>
+        `),
+      })
+    }
+
+    return { ok: true }
+  } catch (err) {
+    if (err instanceof z.ZodError || (err as any)?.issues) {
+      return { ok: false, error: 'Revisá los campos del formulario.' }
+    }
+    return { ok: false, error: 'Error inesperado.' }
+  }
 }
 ```
+
+Reglas obligatorias:
+
+- `to` del negocio sale de `tenants.contact_email`; nunca `RESEND_TO_EMAIL`.
+- `resend_api_key` sale de `tenants.resend_api_key`.
+- `from` siempre usa el dominio verificado de SitioHoy: `contacto@sitiohoy.com.ar`.
+- Enviar dos emails por consulta: notificación al negocio y confirmación al visitante.
+- Nunca enviar emails solo con `text`; siempre incluir `html` con estilos inline.
+- Agregar `X-Entity-Ref-ID` único por email para reducir falsos positivos de spam.
 
 ---
 
@@ -149,18 +202,26 @@ import { sendContactForm } from './actions'
 
 export const ContactForm = () => {
   const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
+  const [serverError, setServerError] = useState<string | null>(null)
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ContactFormData>({
     resolver: zodResolver(contactSchema),
   })
 
   const onSubmit = async (data: ContactFormData) => {
-    setStatus('loading')
-    const result = await sendContactForm(data)
-    if (result.ok) {
-      setStatus('ok')
-      reset()
-    } else {
+    try {
+      setStatus('loading')
+      setServerError(null)
+      const result = await sendContactForm(data)
+      if (result.ok) {
+        setStatus('ok')
+        reset()
+      } else {
+        setServerError(result.error)
+        setStatus('error')
+      }
+    } catch {
+      setServerError('Error al enviar. Intentá de nuevo.')
       setStatus('error')
     }
   }
@@ -230,7 +291,7 @@ export const ContactForm = () => {
 
       {status === 'error' && (
         <p className="form-error" role="alert">
-          Hubo un error al enviar. Intentá de nuevo o escribinos por WhatsApp.
+          {serverError ?? 'Hubo un error al enviar. Intentá de nuevo o escribinos por WhatsApp.'}
         </p>
       )}
 

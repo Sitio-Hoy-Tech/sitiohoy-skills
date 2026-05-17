@@ -25,10 +25,13 @@ export interface Tenant {
   status: 'active' | 'suspended' | 'cancelled' | null
   max_products: number | null
   url: string | null
+  revalidation_secret: string | null
   mp_access_token: string | null
   mp_public_key: string | null
   resend_api_key: string | null
+  contact_email: string | null
   envia_access_token: string | null
+  correo_argentino_customer_id: string | null
   umami_url: string | null
   umami_website_id: string | null
   origin_name: string | null
@@ -54,6 +57,9 @@ export interface Category {
   active: boolean
 }
 
+// Category no tiene campo image en BD.
+// Para imágenes de categorías, resolver por slug con un mapa local de Unsplash.
+
 export interface Subcategory {
   id: string
   tenant_id: string
@@ -74,6 +80,13 @@ export interface Product {
   description: string | null
   price: number
   compare_at_price: number | null    // ← precio tachado. NO usar compare_price
+  stock: number
+  stock_unlimited: boolean
+  weight_grams: number | null
+  length_cm: number | null
+  width_cm: number | null
+  height_cm: number | null
+  shipping_required: boolean | null
   category_id: string | null
   active: boolean
   featured: boolean
@@ -114,11 +127,15 @@ export interface ProductWithRelations extends Product {
 
 export type OrderStatus =
   | 'pending'
+  | 'pending_payment'
+  | 'paid'
+  | 'payment_failed'
+  | 'processing'
   | 'confirmed'
-  | 'preparing'
   | 'shipped'
   | 'delivered'
   | 'cancelled'
+  | 'refunded'
 
 export type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'in_process'
 
@@ -242,6 +259,19 @@ export interface PaymentEvent {
   created_at: string
 }
 
+// ─── PLATFORM CONFIG ───────────────────────────────────────────────────────
+
+export interface PlatformConfig {
+  id: string
+  correo_argentino_user: string | null
+  correo_argentino_password: string | null
+  correo_argentino_customer_id: string | null
+  correo_argentino_token: string | null
+  correo_argentino_token_expires_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 // ─── USER TENANTS ────────────────────────────────────────────────────────────
 
 export interface UserTenant {
@@ -278,6 +308,22 @@ export interface CartState {
 
 ---
 
+## Regla TypeScript — unions siempre con `type`
+
+Para unions discriminadas, usar `type`. `interface` no puede representar una union y rompe el parser.
+
+```typescript
+// ❌ Incorrecto
+export interface ContactResult { ok: true; data: string } | { ok: false; error: string }
+
+// ✅ Correcto
+export type ContactResult =
+  | { ok: true; data: string }
+  | { ok: false; error: string }
+```
+
+---
+
 ## Helpers de precio de variante
 
 ```typescript
@@ -309,14 +355,14 @@ export const formatPrice = (amount: number): string =>
 // ✅ Correcto — tipo inferido coincide con BD
 const { data } = await supabase
   .from('products')
-  .select('id, name, price, compare_at_price')
-  .returns<Pick<Product, 'id' | 'name' | 'price' | 'compare_at_price'>[]>()
+  .select('id, name, price, compare_at_price, stock, stock_unlimited')
+  .returns<Pick<Product, 'id' | 'name' | 'price' | 'compare_at_price' | 'stock' | 'stock_unlimited'>[]>()
 
 // ✅ Con relaciones
 const { data } = await supabase
   .from('products')
   .select(`
-    id, name, slug, price, compare_at_price, description,
+    id, name, slug, price, compare_at_price, stock, stock_unlimited, description,
     product_images!product_images_product_id_fkey(url, alt, position),
     categories(name, slug)
   `)

@@ -13,7 +13,7 @@ export interface ShippingZone {
 
 /**
  * Devuelve las zonas de envío activas del tenant.
- * Cacheado con ISR on-demand — invalida con revalidateTag(TAGS.SHIPPING).
+ * Cacheado con ISR on-demand — invalida con revalidateTag(TAGS.SHIPPING, 'default').
  * Solo Plan Emprendimiento y Plan Empresa (envíos por zona fija).
  */
 export const getShippingZones = unstable_cache(

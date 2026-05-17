@@ -33,7 +33,8 @@ Agregar en `.claude/settings.json` del proyecto:
 
 ### Sin MCP (cualquier IA)
 
-Generar los archivos SQL en `supabase/migrations/` y el cliente los ejecuta desde el SQL Editor del Dashboard de Supabase.
+Generar los archivos SQL en `supabase/migrations/`, vincular el proyecto con `supabase link`
+y aplicar con `supabase db push`. No usar SQL Editor salvo bloqueo documentado.
 
 ---
 
@@ -54,6 +55,7 @@ Generar los archivos SQL en `supabase/migrations/` y el cliente los ejecuta desd
 12. contact_messages
 13. order_events
 14. payment_events
+15. platform_config
 ```
 
 > Regla SitioHoy v2.1: el schema base se crea completo en todos los planes.
@@ -73,10 +75,13 @@ Generar los archivos SQL en `supabase/migrations/` y el cliente los ejecuta desd
 | `status` | text | YES | `'active'` | active / suspended / cancelled |
 | `max_products` | integer | YES | 50 | Límite según plan |
 | `url` | text | YES | — | URL del sitio |
+| `revalidation_secret` | text | YES | — | Secret único por tenant para `/api/revalidate` |
 | `mp_access_token` | text | YES | — | MercadoPago Access Token |
 | `mp_public_key` | text | YES | — | MercadoPago Public Key |
 | `resend_api_key` | text | YES | — | API key de Resend |
+| `contact_email` | text | YES | — | Email destino del negocio para formularios de contacto |
 | `envia_access_token` | text | YES | — | Token Envia.com |
+| `correo_argentino_customer_id` | text | YES | — | Customer ID MiCorreo específico del negocio; se carga desde admin |
 | `umami_url` | text | YES | — | URL script Umami |
 | `umami_website_id` | text | YES | — | Website ID de Umami |
 | `origin_name` | text | YES | — | Remitente envíos (Envia.com) |
@@ -89,6 +94,22 @@ Generar los archivos SQL en `supabase/migrations/` y el cliente los ejecuta desd
 | `subscription_status` | text | YES | — | Estado suscripción |
 | `current_period_end` | timestamptz | YES | — | Fin del período activo |
 | `created_at` | timestamptz | YES | now() | — |
+
+Migración incremental si el proyecto ya existe:
+
+```sql
+ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS url text;
+ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS revalidation_secret text;
+ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS contact_email text;
+
+UPDATE public.tenants
+SET
+  url = 'https://DOMINIO-DEL-SITIO.vercel.app',
+  revalidation_secret = 'SECRET-UNICO-POR-TENANT'
+WHERE id = 'TENANT_ID';
+```
+
+Generar el secret con `openssl rand -hex 32`. Debe ser distinto por tenant.
 
 ---
 
@@ -142,6 +163,13 @@ Generar los archivos SQL en `supabase/migrations/` y el cliente los ejecuta desd
 | `description` | text | YES | — |
 | `price` | numeric | NO | — |
 | `compare_at_price` | numeric | YES | — | ← precio tachado. NO usar `compare_price` |
+| `stock` | integer | YES | 0 | Stock base si el producto no usa variantes |
+| `stock_unlimited` | boolean | YES | false | `true` para servicios/productos sin control de stock |
+| `weight_grams` | integer | YES | 500 | Peso del producto para envíos. Gramos, mínimo 1 |
+| `length_cm` | numeric | YES | 20 | Largo del paquete en cm |
+| `width_cm` | numeric | YES | 15 | Ancho del paquete en cm |
+| `height_cm` | numeric | YES | 8 | Alto del paquete en cm |
+| `shipping_required` | boolean | YES | true | `false` para digital/servicio |
 | `category_id` | uuid | YES | — (FK → categories.id) |
 | `active` | boolean | YES | true |
 | `featured` | boolean | YES | false |
@@ -190,7 +218,7 @@ Generar los archivos SQL en `supabase/migrations/` y el cliente los ejecuta desd
 |---|---|---|---|
 | `id` | uuid | NO | gen_random_uuid() |
 | `tenant_id` | uuid | YES | — |
-| `status` | text | YES | `'pending'` | pending → confirmed → preparing → shipped → delivered |
+| `status` | text | YES | `'pending'` | Ver constraint completo abajo |
 | `payment_status` | text | YES | `'pending'` | pending / approved / rejected / in_process |
 | `mp_payment_id` | text | YES | — | ← NO usar `payment_id` |
 | `payment_provider` | text | YES | `'mercadopago'` | — |
@@ -214,6 +242,22 @@ Generar los archivos SQL en `supabase/migrations/` y el cliente los ejecuta desd
 | `discount_amount` | numeric | YES | 0 |
 | `created_at` | timestamptz | YES | now() |
 | `updated_at` | timestamptz | YES | now() |
+
+Migración incremental si el proyecto ya existe:
+
+```sql
+ALTER TABLE public.orders
+  DROP CONSTRAINT IF EXISTS orders_status_check;
+
+ALTER TABLE public.orders
+  ADD CONSTRAINT orders_status_check CHECK (
+    status IN (
+      'pending', 'pending_payment', 'paid', 'payment_failed',
+      'processing', 'confirmed', 'shipped', 'delivered',
+      'cancelled', 'refunded'
+    )
+  );
+```
 
 ---
 
@@ -317,6 +361,25 @@ Generar los archivos SQL en `supabase/migrations/` y el cliente los ejecuta desd
 
 ---
 
+## Tabla: `platform_config`
+
+> Configuración privada de la plataforma SitioHoy. No es por tenant.
+> Las credenciales de acceso de Correo Argentino viven acá, no en `tenants` ni `.env`.
+> `tenants.correo_argentino_customer_id` sigue siendo específico de cada negocio.
+
+| Columna | Tipo | Nullable | Default |
+|---|---|---|---|
+| `id` | uuid | NO | gen_random_uuid() |
+| `correo_argentino_user` | text | YES | — |
+| `correo_argentino_password` | text | YES | — |
+| `correo_argentino_customer_id` | text | YES | — |
+| `correo_argentino_token` | text | YES | — |
+| `correo_argentino_token_expires_at` | timestamptz | YES | — |
+| `created_at` | timestamptz | YES | now() |
+| `updated_at` | timestamptz | YES | now() |
+
+---
+
 ## Relaciones
 
 ```
@@ -354,7 +417,7 @@ const tenantId = process.env.NEXT_PUBLIC_TENANT_ID!
 const { data: products } = await supabase
   .from('products')
   .select(`
-    id, name, slug, price, compare_at_price, featured, description,
+    id, name, slug, price, compare_at_price, stock, stock_unlimited, weight_grams, length_cm, width_cm, height_cm, shipping_required, featured, description,
     product_images!product_images_product_id_fkey(url, alt, position),
     categories(name, slug)
   `)
@@ -366,7 +429,7 @@ const { data: products } = await supabase
 const { data: product } = await supabase
   .from('products')
   .select(`
-    id, name, slug, price, compare_at_price, description,
+    id, name, slug, price, compare_at_price, stock, stock_unlimited, weight_grams, length_cm, width_cm, height_cm, shipping_required, description,
     product_images!product_images_product_id_fkey(url, alt, position),
     product_variants!product_variants_product_id_fkey(id, name, stock, price, price_modifier),
     categories(name, slug)
@@ -403,6 +466,9 @@ const { data: orders } = await supabase
 
 ```sql
 -- 1. Función helper tenant_id (en public — Supabase no permite crear en schema auth)
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS pg_net SCHEMA extensions;
+
 CREATE OR REPLACE FUNCTION public.get_tenant_id()
 RETURNS uuid LANGUAGE sql STABLE AS $$
   SELECT (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid
@@ -417,10 +483,13 @@ CREATE TABLE tenants (
   status text DEFAULT 'active',
   max_products integer DEFAULT 50,
   url text,
+  revalidation_secret text,
   mp_access_token text,
   mp_public_key text,
   resend_api_key text,
+  contact_email text,
   envia_access_token text,
+  correo_argentino_customer_id text,
   umami_url text,
   umami_website_id text,
   origin_name text, origin_phone text, origin_address text,
@@ -471,6 +540,13 @@ CREATE TABLE products (
   description text,
   price numeric(10,2) NOT NULL,
   compare_at_price numeric(10,2),
+  stock integer DEFAULT 0 CHECK (stock >= 0),
+  stock_unlimited boolean DEFAULT false,
+  weight_grams integer DEFAULT 500 CHECK (weight_grams IS NULL OR weight_grams > 0),
+  length_cm numeric(10,2) DEFAULT 20 CHECK (length_cm IS NULL OR length_cm > 0),
+  width_cm numeric(10,2) DEFAULT 15 CHECK (width_cm IS NULL OR width_cm > 0),
+  height_cm numeric(10,2) DEFAULT 8 CHECK (height_cm IS NULL OR height_cm > 0),
+  shipping_required boolean DEFAULT true,
   category_id uuid REFERENCES categories(id),
   active boolean DEFAULT true,
   featured boolean DEFAULT false,
@@ -507,7 +583,13 @@ CREATE TABLE product_variants (
 CREATE TABLE orders (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid REFERENCES tenants(id) ON DELETE CASCADE,
-  status text DEFAULT 'pending',
+  status text DEFAULT 'pending' CONSTRAINT orders_status_check CHECK (
+    status IN (
+      'pending', 'pending_payment', 'paid', 'payment_failed',
+      'processing', 'confirmed', 'shipped', 'delivered',
+      'cancelled', 'refunded'
+    )
+  ),
   payment_status text DEFAULT 'pending',
   mp_payment_id text,
   payment_provider text DEFAULT 'mercadopago',
@@ -603,6 +685,17 @@ CREATE TABLE payment_events (
   status text,
   payload jsonb DEFAULT '{}'::jsonb,
   created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE platform_config (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  correo_argentino_user text,
+  correo_argentino_password text,
+  correo_argentino_customer_id text,
+  correo_argentino_token text,
+  correo_argentino_token_expires_at timestamptz,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
 );
 
 -- 13. Trigger updated_at automático

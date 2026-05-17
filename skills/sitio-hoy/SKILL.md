@@ -41,10 +41,17 @@ Usar `sitio-hoy-briefing`. **No hacer preguntas por consola — siempre abrir el
 3. El servidor abre `http://localhost:3456` automáticamente.
 4. Esperar a que el cliente complete y envíe el formulario.
 5. El servidor genera `.sitiohoy/intake.json` y `sitiohoy.config.json` automáticamente.
-6. Usar `sitio-hoy-project-director` para generar context packs y dirección visual:
+   - Si el cliente ya existe en el sistema (`clientStatus = "existente"`), el formulario pedirá el `existingTenantId`.
+   - **No crear un nuevo tenant** si `existingTenantId` está presente — usar el existente.
+6. Cuando el cliente confirme que envió el formulario, verificar que el servidor se cerró:
+   - el script debe terminar solo después del submit;
+   - si sigue vivo, detenerlo con `Ctrl+C` o cerrar el proceso antes de continuar;
+   - no dejar servidores de briefing corriendo en segundo plano.
+7. Validar que `brief.md` exista. Si no existe, generarlo desde `.sitiohoy/intake.json` antes de avanzar.
+8. Usar `sitio-hoy-project-director` para generar context packs y dirección visual:
    - `.sitiohoy/context/`
    - `.sitiohoy/design/`
-7. Con `sitiohoy.config.json`, determinar qué plan importar.
+9. Con `sitiohoy.config.json`, determinar qué plan importar.
 
 ### Paso 2 — Importar archivos del plan
 
@@ -59,6 +66,25 @@ Plan Empresa       → leer plans/empresa/INDEX.md
 El INDEX.md de cada plan lista exactamente qué archivos cargar y en qué orden.
 **Cargar solo los archivos del plan activo — no cargar integraciones innecesarias.**
 
+### Paso 2.5 — Diseño en Stitch (OBLIGATORIO)
+
+**Stitch es obligatorio. Sin diseño no se implementa UI. No hay fallback manual.**
+
+1. **Health check**: ejecutar `mcp__pencil__get_editor_state`.
+   - Si falla: **PARAR**. Informar al usuario que Stitch no está conectado y pedir que lo conecte. No continuar hasta que responda.
+   - Si responde: continuar.
+2. Verificar que `.sitiohoy/design/design-brief-stitch.md` existe (generado por briefing-server).
+3. Enviar `design-brief-stitch.md` a Stitch via MCP (`mcp__pencil__batch_design`).
+4. Revisar design screenshots con `mcp__pencil__get_screenshot`.
+5. Si el diseño necesita ajustes, usar `mcp__pencil__replace_all_matching_properties` o `mcp__pencil__set_variables`.
+6. Proceder con implementación usando el diseño como referencia pixel-perfect.
+7. Los design tokens del .pen file se trasladan a `styles/tokens.css`.
+
+**Antes de CADA módulo visual (1-6):** repetir health check con `get_editor_state`.
+Si se pierde conexión en cualquier momento, bloquear y pedir reconexión.
+
+Para el flujo detallado, consultar `references/stitch-workflow.md`.
+
 ### Paso 3 — Scaffold y base técnica
 
 Si el proyecto arranca desde cero:
@@ -66,7 +92,13 @@ Si el proyecto arranca desde cero:
 1. Leer `.sitiohoy/context/module-0.md`.
 2. Usar `sitio-hoy-scaffold` para crear la base Next.js + Supabase + QA scripts.
 3. Usar `sitio-hoy-database` para generar migración inicial, RLS, storage y seeds.
-4. Ejecutar `npm run build` y `npm run sitiohoy:validate` antes de escribir UI.
+4. Aplicar todo lo que se suba a Supabase con Supabase CLI:
+   - migraciones y seeds: `supabase db push`;
+   - tipos: `supabase gen types typescript`;
+   - storage/assets: `supabase storage` cuando corresponda.
+   No usar SQL Editor, Dashboard ni pegado manual salvo bloqueo explícito de CLI documentado en tracking.
+5. Si falta `brief.md`, ejecutar `npm run sitiohoy:brief-from-intake`.
+6. Ejecutar `npm run sitiohoy:preflight`, `npm run sitiohoy:secret-scan`, `npm run build` y `npm run sitiohoy:validate` antes de escribir UI.
 
 Si el proyecto ya existe, inspeccionar primero y aplicar solo los faltantes.
 
@@ -80,21 +112,35 @@ Leer `brief.md`, confirmar que tiene:
 - contacto y redes;
 - assets faltantes.
 
-Con ese brief, derivar las decisiones de diseño en `core/04-design-system.md`.
-Para ahorrar tokens, preferir cargar `.sitiohoy/design/design-direction.md` y
-`.sitiohoy/design/layout-recipe.md` antes que todo `core/04-design-system.md`.
+Leer `.sitiohoy/copy-guide.md` para mantener consistencia de tono y copy en todos los módulos.
 
-### Paso 5 — Confirmar assets y ejecutar módulos
+Si faltan datos del brief, completar desde `.sitiohoy/intake.json`. Si sigue faltando algo bloqueante
+para MercadoPago, Correo Argentino, Envia.com, dominio, productos, peso/envíos o contacto, pedir solo ese dato
+y registrar el bloqueo en `proyecto-tracking.json`.
+
+Con ese brief, derivar las decisiones de diseño en `core/04-design-system.md`.
+Para ahorrar tokens, preferir cargar `.sitiohoy/design/inspiration-board.md`,
+`.sitiohoy/design/design-direction.md` y `.sitiohoy/design/layout-recipe.md`
+antes que todo `core/04-design-system.md`.
+
+### Paso 5 — Confirmar assets, productos y ejecutar módulos
 
 Verificar que `_assets-cliente/` tiene las imágenes antes de Módulo 1.
+Si el cliente no mandó imágenes de productos, cargar los productos indicados con imágenes de Unsplash
+relacionadas al rubro, categoría y nombre del producto. Registrar fuente/keyword usada en tracking.
+Para productos físicos, confirmar que el catálogo tenga `weight_grams`; si no se informó peso, usar un
+default conservador por rubro, marcarlo como estimado y dejarlo explícito en tracking para auditoría.
 Ejecutar los módulos del plan secuencialmente según el archivo `modulos.md` correspondiente.
-No avanzar al siguiente módulo sin checklist ✅ completo y sin pasar `sitio-hoy-qa`.
+No avanzar al siguiente módulo sin checklist ✅ completo, sin pasar `sitio-hoy-qa` y, en módulos
+visuales, sin `SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit` con screenshots revisados.
 
 ### Paso 6 — Reporte QA
 
 Al terminar todos los módulos, usar `sitio-hoy-qa` para ejecutar los gates automáticos
 y generar `QA-[nombre-negocio]-[YYYY-MM-DD].md` en la raíz del proyecto. Luego leer
 `core/11-qa-checklist.md` para completar los pendientes manuales.
+Antes de deploy/entrega, ejecutar también `SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit`
+y `npm run sitiohoy:audit`; resolver cualquier error.
 
 ### Paso 7 — Launch, Tenant y Deploy
 
@@ -103,7 +149,8 @@ Usar `sitio-hoy-launch-automation` solo cuando QA esté aprobado o documentado.
 1. Generar `.sitiohoy/launch/` con plan, comandos, env vars, provisioning y demo data.
 2. Crear repo GitHub en la organización indicada y hacer push inicial.
 3. Aplicar migraciones Supabase.
-4. Crear/actualizar fila `tenants`, usuario admin y relación `user_tenants`.
+4. Si `clientStatus` es `nuevo`: crear fila `tenants`, usuario admin y relación `user_tenants`.
+   - Si `clientStatus` es `existente` y hay `existingTenantId`: **no crear tenant** — usar el existente y solo actualizar configuración/datos según el intake.
 5. Cargar productos demo si todavía no hay catálogo real.
 6. Importar en Vercel, cargar env vars, deploy preview y deploy production.
 7. Completar `core/15-deploy-vercel.md` antes del go-live.
@@ -115,11 +162,19 @@ Usar `sitio-hoy-launch-automation` solo cuando QA esté aprobado o documentado.
 **Comportamiento:**
 - Modo silencioso activo en todo momento
 - Una pregunta → nunca volver a pedir lo ya dado
-- Solo hablar ante: error crítico / dato faltante / fin de módulo / bloqueo externo
+- Solo hablar ante: error crítico / dato faltante / fin de módulo / bloqueo externo / Stitch desconectado
+- **Stitch obligatorio**: antes de cada módulo visual (1-6), verificar `mcp__pencil__get_editor_state`. Si falla, PARAR y pedir al usuario que conecte Stitch. No diseñar manualmente, no inventar, no saltar.
 - Formato de fin de módulo: `Módulo N ✅ · Listo para N+1`
 - Al finalizar cada módulo: ejecutar `npm run sitiohoy:tracking -- --modulo N --nombre "Nombre"` para actualizar `proyecto-tracking.json` automáticamente
+- En ese tracking, completar `--checks` con los IDs cumplidos de `.sitiohoy/checklists/module-checks.json`
+- Preferir cerrar módulos con `npm run sitiohoy:module-close -- --modulo N --nombre "Nombre" --checks "..."` para que tracking, checks y QA queden sincronizados.
 - Al finalizar cada módulo: ejecutar `npm run sitiohoy:validate` o justificar por qué no aplica
+- Al finalizar módulos visuales: ejecutar `SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit`, revisar screenshots 375/390/768/1280/1920 y registrar resultado en tracking.
+- Al finalizar módulos críticos de pagos/envíos/deploy: ejecutar `npm run sitiohoy:audit` o justificar por qué todavía no aplica
 - Al finalizar cada módulo: actualizar `README.md` si el módulo agrega una integración, patrón clave, variable de entorno o página nueva que no esté documentada. No reescribir secciones que no cambiaron.
+- Cada vez que se corrija un error durante una página o módulo, registrarlo en `.sitiohoy/errores-corregidos.md` con fecha `-03:00`, causa, solución y recomendación para skills futuras.
+- El tracking debe quedar audit-ready: timestamps ISO con offset Argentina `-03:00`, comandos ejecutados, archivos tocados, decisiones, datos estimados, credenciales pendientes, proveedor de imágenes, resultados de QA y bloqueos externos.
+- Antes de marcar cualquier módulo como completo, repasar el checklist del plan activo y confirmar explícitamente MercadoPago, Correo Argentino/Envia.com, Resend, Umami, env vars, RLS y productos según corresponda.
 
 **Técnicas (aplicar siempre sin excepción):**
 - Server Components por defecto — `'use client'` solo para estado/efectos/eventos
@@ -127,10 +182,11 @@ Usar `sitio-hoy-launch-automation` solo cuando QA esté aprobado o documentado.
 - `next/image` siempre — nunca `<img>` nativo
 - `next/font` siempre — nunca `<link>` externo para fuentes
 - `@supabase/ssr` en server — `createBrowserClient` solo en client
-- `unstable_cache` + `revalidateTag()` — nunca `revalidatePath('/')` global
+- `unstable_cache` + `revalidateTag(tag, 'default')` — nunca `revalidatePath('/')` global
 - `error.tsx` y `not-found.tsx` en cada segmento de ruta importante
 - `loading.tsx` con skeleton en rutas de datos pesados
 - Mobile-first siempre — diseñar desde 375px
+- Supabase CLI siempre para subir cambios a Supabase. El Dashboard queda solo para revisar o recuperar un bloqueo, no como camino normal de ejecución.
 
 **El admin NO se construye en este skill.** El admin es un repositorio separado.
 La BD y RLS se configuran completos para que el admin futuro funcione sin modificaciones.
@@ -232,7 +288,7 @@ Lo que cambia es cómo se ejecutan ciertos pasos de setup. Seguir la ruta corres
 
 | Operación | Claude Code | Cursor / Windsurf | OpenCode | GPT-4 / Gemini / Codex |
 |---|---|---|---|---|
-| Aplicar migraciones SQL | Supabase MCP (automático) o `supabase db push` | `supabase db push` en terminal | `supabase db push` en terminal | SQL Editor en Dashboard de Supabase |
+| Aplicar migraciones SQL | `supabase db push` | `supabase db push` en terminal | `supabase db push` en terminal | `supabase db push` en terminal |
 | Crear repo GitHub | `gh repo create` vía shell | `gh repo create` en terminal | `gh repo create` en terminal | UI de GitHub + `git remote add origin` |
 | Deploy a Vercel | `vercel` CLI o Vercel MCP | `vercel` CLI en terminal | `vercel` CLI en terminal | `vercel` CLI en terminal o UI de Vercel |
 | Leer `/cost` de tokens | Comando `/cost` en Claude Code | No disponible — estimar | No disponible — estimar | No disponible — estimar |
@@ -242,8 +298,13 @@ Lo que cambia es cómo se ejecutan ciertos pasos de setup. Seguir la ruta corres
 
 Si tu entorno **no tiene MCP de Supabase**:
 1. Ejecutar `node scripts/generate-supabase-migration.mjs` → genera `supabase/migrations/001_initial_schema.sql` y `002_seed_admin.sql`
-2. Abrir Supabase Dashboard → SQL Editor → pegar y ejecutar en orden
-3. Credenciales del admin en `credentials.local.json`
+2. Vincular el proyecto con `supabase link --project-ref PROJECT_REF`
+3. Aplicar con `supabase db push`
+4. Generar tipos con `supabase gen types typescript --linked > types/database.generated.ts`
+5. Credenciales del admin en `credentials.local.json`
+
+No pegar SQL en el Dashboard salvo que `supabase db push` falle por un bloqueo no resoluble. Si ocurre,
+dejar constancia del error, comando, fecha `-03:00` y decisión en `proyecto-tracking.json`.
 
 Si tu entorno **no soporta skill delegation**:
 - Leer directamente el archivo SKILL.md de la skill indicada y seguir su Workflow

@@ -23,12 +23,13 @@ const tenantId = process.env.NEXT_PUBLIC_TENANT_ID!
 export const getShippingZones = unstable_cache(
   async () => {
     const supabase = createServiceClient()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('shipping_zones')
       .select('id, name, description, price')
       .eq('tenant_id', tenantId)
       .eq('active', true)
       .order('position')
+    if (error) console.error('[getShippingZones]', error)
     return data ?? []
   },
   ['shipping-zones'],

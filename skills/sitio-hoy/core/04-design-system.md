@@ -11,6 +11,24 @@ tipo: core — cargar en Módulo 0 (generación) y Módulo 1 (implementación)
 
 ---
 
+## 0. Protocolo de Calidad Visual
+
+El diseño es un gate de entrega, no una mejora opcional. Antes de escribir componentes públicos:
+
+1. Ejecutar `sitio-hoy-project-director` y leer `.sitiohoy/design/inspiration-board.md`.
+2. Revisar referencias del cliente; si no hay, usar referencias curadas del board y sitios reales del rubro.
+3. Definir tokens, tipografías, composición de hero, patrón de catálogo, animaciones y estados.
+4. Implementar mobile-first desde 375px.
+5. Correr `SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit`.
+6. Revisar manualmente screenshots en `.sitiohoy/qa/visual/`.
+7. No cerrar módulos visuales con overflow, texto cortado, imágenes rotas, hero genérico o nota visual menor a 8/10.
+
+Si el cliente no envió imágenes, usar Unsplash relacionado al producto/rubro y documentar el criterio. No usar fotos genéricas oscuras, recortadas o de bancos de imagen sin relación clara con el emprendimiento.
+
+Cada proyecto debe tener dirección visual propia: paleta, tipografías, composición, ritmo de imágenes y microinteracciones adaptadas al cliente. No repetir el mismo hero, las mismas fuentes ni la misma estructura de cards por comodidad. Si dos proyectos se parecen visualmente, volver a generar variante de diseño antes de implementar.
+
+---
+
 ## 1. Generación del Design System
 
 ### Con AIDesigner MCP (Claude Code / Cursor / Windsurf)
@@ -118,6 +136,7 @@ npx -y @aidesigner/agent-skills init cursor   # Cursor
 ## 2. Tipografías — Pares por Estilo de Negocio
 
 Siempre usar `next/font/google`. Nunca `<link>` externo.
+Elegir fuentes según rubro, personalidad, precio percibido y audiencia. No usar siempre la misma combinación.
 
 | Estilo del negocio | Display | Body |
 |---|---|---|
@@ -132,6 +151,8 @@ Siempre usar `next/font/google`. Nunca `<link>` externo.
 
 Nunca usar `Roboto`, `Lato` o `Open Sans` por defecto — son señal de diseño genérico.
 
+Si el brief pide una estética específica, sumar una segunda propuesta tipográfica moderna aunque no esté en la tabla. Documentar en `DESIGN.md` por qué esa fuente expresa mejor al cliente.
+
 ---
 
 ## 3. Estructuras de Hero (rotar por proyecto — nunca repetir)
@@ -140,7 +161,7 @@ Nunca usar `Roboto`, `Lato` o `Open Sans` por defecto — son señal de diseño 
 |---|---|---|
 | A | Bento grid: imagen hero izquierda + grid de características derecha | Tech, servicios |
 | B | Full-bleed imagen/video con texto overlay y CTA flotante | Moda, gastronomía |
-| C | Split-screen 50/50: imagen + texto vertical centrado | Servicios, lujo |
+| C | Hero editorial con imagen full-bleed, texto overlay y pista visible de la siguiente sección | Servicios, lujo |
 | D | Tipografía XL en primer plano + imagen de fondo con blur/parallax | Cualquiera sin fotos |
 | E | Carrusel de productos featured con animación de entrada | E-commerce masivo |
 | F | Marquee horizontal de productos + texto central minimal + badge de confianza | Ropa, accesorios |
@@ -202,9 +223,63 @@ Antes de marcar un módulo como ✅, verificar en estos viewports:
 - **1280px** (desktop)
 - **1920px** (desktop grande)
 
+Comando obligatorio con servidor local activo:
+
+```bash
+SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit
+```
+
+El reporte queda en `.sitiohoy/qa/visual-report.json` y los screenshots en `.sitiohoy/qa/visual/`. Si el script marca errores, el módulo no se cierra.
+
 ---
 
-## 6. Estados de Componentes (obligatorio en todos)
+## 6. Navegación Responsive — Header, Menú Mobile y Categorías
+
+### Menú mobile
+
+En drawers fixed, usar `height: 100vh`; no `h-full`.
+Para `CartDrawer` y drawers equivalentes, desmontar cuando están cerrados:
+`if (!isOpen) return null`. No dejarlos ocultos con `translate-x-full`, porque
+pueden interferir con foco, scroll y accesibilidad.
+
+```tsx
+<aside
+  className="fixed inset-0 z-50"
+  style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}
+>
+  <header style={{ flexShrink: 0 }}>...</header>
+  <nav style={{ flex: 1, overflowY: 'auto' }}>...</nav>
+  <footer style={{ flexShrink: 0 }}>...</footer>
+</aside>
+```
+
+El Header Server Component debe pasar `categories: CatalogCategory[]` al `MobileMenu`
+Client Component. En mobile, las categorías siempre están visibles como submenu:
+
+- primer ítem: `Ver todo el catálogo` → `/productos`
+- categorías: `/productos?categoria=${cat.slug}`
+- no usar acordeón para categorías principales del catálogo
+
+### Desktop nav — dropdown con hover seguro
+
+```tsx
+const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+function handleMouseEnter() {
+  if (timeoutRef.current) clearTimeout(timeoutRef.current)
+  setOpen(true)
+}
+
+function handleMouseLeave() {
+  timeoutRef.current = setTimeout(() => setOpen(false), 120)
+}
+```
+
+El dropdown debe cubrir el espacio entre trigger y panel para evitar cierres al mover el mouse.
+
+---
+
+## 7. Estados de Componentes (obligatorio en todos)
 
 | Estado | Implementación |
 |---|---|
@@ -221,6 +296,12 @@ Antes de marcar un módulo como ✅, verificar en estos viewports:
 
 > CSS de shimmer definido en `core/17-manejo-errores.md` — sección `loading.tsx`. Copiar desde allí.
 
+### Formularios y selects
+
+Nunca usar `<select>` nativo en UI pública o admin. Usar dropdown custom accesible
+integrado con `Controller` de `react-hook-form`, para mantener estilos, estados,
+errores y comportamiento responsive consistentes.
+
 ### `prefers-reduced-motion` — obligatorio
 
 ```css
@@ -234,7 +315,26 @@ Antes de marcar un módulo como ✅, verificar en estos viewports:
 
 ---
 
-## 7. Optimización de Imágenes
+## 8. Animaciones y Microinteracciones
+
+Usar animaciones con intención en todos los sitios públicos, respetando `prefers-reduced-motion`.
+No dejar páginas estáticas si el rubro pide energía, artesanalidad, premium o dinamismo.
+
+Mínimos por proyecto:
+
+- Hero: entrada de texto + imagen o producto con delay suave.
+- Header: transición de estado sticky/menu.
+- Cards de producto: hover/focus con imagen, sombra o CTA sin mover layout.
+- Carrito: feedback visual al agregar producto.
+- Menú mobile: apertura/cierre con opacity + translate corto.
+- Formularios: estado loading, éxito y error con transición accesible.
+
+Duraciones recomendadas: `150ms` para controles, `250ms` para cards/menus, `400ms` para hero.
+Nunca animar propiedades que rompen performance (`width`, `height`, `top`, `left`) si se puede usar `transform` u `opacity`.
+
+---
+
+## 9. Optimización de Imágenes
 
 ### Compresión client-side antes de upload
 
@@ -302,7 +402,7 @@ export function validateImage(file: File) {
 
 ---
 
-## 8. Detección de AI Slop — Patrones Prohibidos
+## 10. Detección de AI Slop — Patrones Prohibidos
 
 Verificar que el sitio NO tenga ninguno de estos patrones antes de entregar:
 
@@ -315,10 +415,15 @@ Verificar que el sitio NO tenga ninguno de estos patrones antes de entregar:
 - Gradiente diagonal `from-purple-500 to-pink-500` sin relación con la marca
 - Íconos flotantes decorativos sin función
 - Sección "Features" con 6 cards idénticas con íconos de Heroicons y texto placeholder
+- Texto dentro de botones/cards que se corta o pisa otros elementos
+- Cards dentro de cards o secciones enteras tratadas como cards decorativas
+- UI dominada por un solo color sin contraste real
+- Hero sin señal clara del producto, negocio o rubro en el primer viewport
+- Misma combinación de fuentes, mismo hero o misma grilla usada en proyectos anteriores sin justificación del brief
 
 ---
 
-## 9. Auditoría de Diseño — 10 Dimensiones
+## 11. Auditoría de Diseño — 10 Dimensiones
 
 Antes de terminar Módulo 1 y Módulo 2, puntuar 0-10:
 
@@ -333,11 +438,17 @@ Antes de terminar Módulo 1 y Módulo 2, puntuar 0-10:
 9. **Densidad** — ¿Congestionado o respira bien?
 10. **Polish** — ¿Hover, loaders, empty states, error states implementados?
 
-**Score < 7 en cualquier dimensión = bloquear entrega del módulo.**
+**Score < 8 en cualquier dimensión = bloquear entrega del módulo.**
+
+Además del puntaje:
+- `visual-report.json` debe quedar OK.
+- Screenshots 375/390/768/1280/1920 deben revisarse manualmente.
+- La primera pantalla debe mostrar marca/producto/rubro y dejar insinuada la siguiente sección.
+- El diseño debe verse específico del cliente, no como template genérico.
 
 ---
 
-## 10. Logos — Si el cliente no tiene
+## 12. Logos — Si el cliente no tiene
 
 Generar con AIDesigner MCP o describir en detalle para generación manual:
 

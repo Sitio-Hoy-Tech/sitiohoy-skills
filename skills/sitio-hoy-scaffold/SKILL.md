@@ -22,6 +22,7 @@ Crear una base consistente antes de escribir UI:
 - Next.js 15+ App Router con TypeScript strict
 - Supabase clients server/service
 - `lib/cache-tags.ts`
+- `app/api/revalidate/route.ts` con secret por tenant
 - `lib/config/env.ts`
 - `lib/resend/client.ts` (todos los planes con Resend activo)
 - `lib/data/shipping.ts` (Plan Emprendimiento y Empresa)
@@ -29,8 +30,24 @@ Crear una base consistente antes de escribir UI:
 - `lib/validations/contact.ts` (si página de contacto activa)
 - `styles/tokens.css`
 - `sitiohoy.config.json`
+- `.sitiohoy/checklists/module-checks.json`
+- `.sitiohoy/errores-corregidos.md`
 - `.env.example`
 - scripts de QA base
+- scripts operativos: `brief-from-intake`, `preflight`, `module-close`, `secret-scan`, `visual-audit`, `sitiohoy:e2e`, `audit`, smoke tests de integraciones y validador remoto Supabase
+
+## Pre-requisito: Diseño en Stitch (BLOQUEANTE)
+
+**Stitch es obligatorio. No hay alternativa manual. Si no está conectado, PARAR.**
+
+Antes de comenzar módulos de UI (1-6):
+1. Ejecutar `mcp__pencil__get_editor_state` — si falla, **BLOQUEAR** e informar al usuario:
+   > "Stitch no está conectado. Necesito que lo conectes para continuar con el diseño. No puedo avanzar sin él."
+2. `.sitiohoy/design/design-brief-stitch.md` debe existir
+3. El diseño debe estar creado en Stitch (frames de todas las páginas, mobile + desktop)
+4. Tomar screenshots de referencia con `get_screenshot` antes de implementar cada página
+5. Tokens de diseño (colores, tipografía, espaciado) deben coincidir con el .pen file
+6. Si Stitch se desconecta durante implementación, **PARAR** y pedir reconexión
 
 ## Workflow
 
@@ -41,7 +58,7 @@ Crear una base consistente antes de escribir UI:
 2. Copiar el contenido de `assets/template-next-supabase/` en la raiz del proyecto.
 3. Instalar dependencias base:
    ```bash
-   npm install @supabase/ssr @supabase/supabase-js lucide-react browser-image-compression zod
+   npm install @supabase/ssr @supabase/supabase-js lucide-react browser-image-compression zod@^3.24.0
    ```
 4. Si plan es `emprendimiento` o `empresa`, instalar:
    ```bash
@@ -51,21 +68,61 @@ Crear una base consistente antes de escribir UI:
    ```bash
    npm install resend
    ```
-6. Crear `sitiohoy.config.json` con plan, negocio e integraciones.
-7. Completar `.env.local` desde `.env.example`.
-8. Ejecutar en orden:
+6. Instalar auditoría visual:
+   ```bash
+   npm install -D playwright @playwright/test
+   npx playwright install chromium
+   ```
+7. Si el cliente subió assets en `_assets-cliente/`, optimizarlos:
+   ```bash
+   npm install -D sharp  # opcional pero recomendado
+   npm run sitiohoy:optimize-assets
+   ```
+   Esto genera `public/assets/` con imágenes en WebP, redimensionadas a max 1920px, y un reporte en `.sitiohoy/asset-report.json`.
+8. Agregar el script E2E del scaffold:
+   ```json
+   "sitiohoy:e2e": "playwright test tests/e2e/"
+   ```
+8. Crear `sitiohoy.config.json` con plan, negocio e integraciones.
+9. Completar `.env.local` desde `.env.example`.
+10. Ejecutar en orden:
    ```bash
    npm run sitiohoy:validate-config   # Valida sitiohoy.config.json antes de todo
+   npm run sitiohoy:brief-from-intake # Genera brief.md si falta y existe intake
+   npm run sitiohoy:preflight         # Bloquea si faltan brief, Supabase CLI, peso/envíos o integraciones críticas
+   npm run sitiohoy:secret-scan       # Bloquea secretos en archivos commiteables
    npm run build
    npm run sitiohoy:validate
    ```
+   Cuando haya UI visible y servidor local activo, ejecutar también:
+   ```bash
+   SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit
+   SITE_URL=http://localhost:3000 npm run sitiohoy:e2e
+   ```
+
+### Extracción de tokens desde Stitch
+
+Si el diseño ya fue creado en Stitch:
+1. Ejecutar `mcp__pencil__get_variables` para obtener design tokens
+2. Mapear variables Stitch → `styles/tokens.css`:
+   - Colors → `--color-*`
+   - Spacing → `--space-*`  
+   - Typography → `--font-*`, `--text-*`
+   - Radius → `--radius-*`
+3. No inventar tokens — usar exactamente los del diseño
 
 ## Reglas
 
 - No escribir componentes visuales antes de tener `styles/tokens.css`.
+- No cerrar módulos visuales sin `.sitiohoy/qa/visual-report.json` OK y screenshots 375/390/768/1280/1920 revisados.
+- No deployar sin `SITE_URL=http://localhost:3000 npm run sitiohoy:e2e` OK y screenshots 375/768/1280/1920 revisados.
+- Los cache tags deben incluir `NEXT_PUBLIC_TENANT_ID`; no usar tags globales como `products` o `homepage`.
+- El endpoint `/api/revalidate` valida `Authorization: Bearer <secret>` contra `tenants.revalidation_secret`, con `REVALIDATION_SECRET` solo como fallback local.
 - No poner credenciales de MercadoPago, Resend o Envia.com en `.env`.
 - No commitear `.env.local` ni `proyecto-tracking.json`.
 - Si el proyecto no esta vacio, inspeccionar primero y copiar solo archivos faltantes.
+- Copiar también `.sitiohoy/checklists/module-checks.json`; es el checklist machine-readable que QA/auditoría usa para evitar cierres incompletos.
+- Cerrar módulos con `npm run sitiohoy:module-close -- --modulo N --nombre "Nombre" --checks "check_a,check_b"` en vez de cerrar a mano.
 
 ## Configuración base obligatoria en app/layout.tsx
 

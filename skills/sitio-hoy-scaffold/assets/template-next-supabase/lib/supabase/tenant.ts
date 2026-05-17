@@ -9,9 +9,11 @@ export const getTenantConfig = unstable_cache(
     const { data, error } = await supabase
       .from('tenants')
       .select(`
-        id, name, slug, plan, status, url,
+        id, name, slug, plan, status, url, revalidation_secret,
         mp_access_token, mp_public_key,
-        resend_api_key, envia_access_token, umami_url, umami_website_id,
+        resend_api_key, contact_email, envia_access_token,
+        correo_argentino_customer_id,
+        umami_url, umami_website_id,
         origin_name, origin_phone, origin_address,
         origin_city, origin_state, origin_postal_code
       `)

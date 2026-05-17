@@ -54,8 +54,19 @@ const tenantId = config.tenantId || deterministicUuid(`sitiohoy:${slug}`)
 const siteUrl = String(args.get('domain') || config.siteUrl || '').replace(/\/$/, '')
 const repo = String(args.get('repo') || slug)
 const org = String(args.get('org') || 'ORG_GITHUB')
-const adminEmail = String(args.get('admin-email') || pickBriefValue('Email') || 'admin@cliente.com')
+const adminEmail = String(args.get('admin-email') || `admin${slug}@sitiohoy.com.ar`)
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9@._-]+/g, '-')
+const adminPassword = crypto.randomBytes(18).toString('base64url')
 const maxProducts = config.limits?.maxProducts ?? (plan === 'esencial' ? 50 : plan === 'emprendimiento' ? 200 : 1000)
+const catalogDefaults = config.catalog ?? {}
+const defaultWeightGrams = Number(catalogDefaults.defaultWeightGrams || 500)
+const defaultDimensions = catalogDefaults.defaultDimensionsCm ?? {}
+const defaultLengthCm = Number(defaultDimensions.length || 20)
+const defaultWidthCm = Number(defaultDimensions.width || 15)
+const defaultHeightCm = Number(defaultDimensions.height || 8)
 const categories = (pickBriefValue('Categorias') || 'Destacados, Novedades')
   .split(',')
   .map((item) => item.trim())
@@ -131,6 +142,7 @@ const envRows = [
   ['NEXT_PUBLIC_URL', siteUrl || `https://${repo}.vercel.app`],
   ['MP_WEBHOOK_SECRET', integrations.mercadopago ? 'MP_WEBHOOK_SECRET' : ''],
   ['ENVIA_API_URL', integrations.envia ? 'https://api-test.envia.com' : ''],
+  ['CA_API_URL', integrations.correoArgentino ? 'https://apitest.correoargentino.com.ar/micorreo/v1' : ''],
 ]
 
 const demoProducts = categories.flatMap((category, categoryIndex) =>
@@ -141,6 +153,11 @@ const demoProducts = categories.flatMap((category, categoryIndex) =>
     description: `Producto demo para validar grilla, cards, detalle y responsive de ${project}.`,
     price: 12000 + categoryIndex * 2500 + index * 900,
     compare_at_price: index === 0 ? 15900 + categoryIndex * 2500 : null,
+    weight_grams: defaultWeightGrams,
+    length_cm: defaultLengthCm,
+    width_cm: defaultWidthCm,
+    height_cm: defaultHeightCm,
+    shipping_required: true,
     featured: categoryIndex === 0,
     image_url: categoryImages[category][index],
   })),
@@ -167,6 +184,11 @@ const productSql = demoProducts
     ${sqlLiteral(product.description)},
     ${sqlLiteral(product.price)},
     ${sqlLiteral(product.compare_at_price)},
+    ${sqlLiteral(product.weight_grams)},
+    ${sqlLiteral(product.length_cm)},
+    ${sqlLiteral(product.width_cm)},
+    ${sqlLiteral(product.height_cm)},
+    ${sqlLiteral(product.shipping_required)},
     true,
     ${sqlLiteral(product.featured)}
   )`,
@@ -213,6 +235,11 @@ INSERT INTO public.products (
   description,
   price,
   compare_at_price,
+  weight_grams,
+  length_cm,
+  width_cm,
+  height_cm,
+  shipping_required,
   active,
   featured
 )
@@ -224,6 +251,11 @@ ON CONFLICT (tenant_id, slug) DO UPDATE SET
   description = EXCLUDED.description,
   price = EXCLUDED.price,
   compare_at_price = EXCLUDED.compare_at_price,
+  weight_grams = EXCLUDED.weight_grams,
+  length_cm = EXCLUDED.length_cm,
+  width_cm = EXCLUDED.width_cm,
+  height_cm = EXCLUDED.height_cm,
+  shipping_required = EXCLUDED.shipping_required,
   active = EXCLUDED.active,
   featured = EXCLUDED.featured,
   updated_at = now();
@@ -323,13 +355,16 @@ set -euo pipefail
 gh repo create ${org}/${repo} --private --source=. --remote=origin --push
 
 # 2) Supabase migraciones
+supabase link --project-ref "$SUPABASE_PROJECT_REF"
 supabase db push
 
 # 3) Supabase tenant/admin
-ADMIN_EMAIL="${adminEmail}" ADMIN_PASSWORD="CAMBIAR_PASSWORD_TEMPORAL" node .sitiohoy/launch/provision-supabase.mjs
+ADMIN_EMAIL="${adminEmail}" ADMIN_PASSWORD="$(node -p "require('./.sitiohoy/launch/admin-credentials.local.json').password")" node .sitiohoy/launch/provision-supabase.mjs
 
 # 4) Supabase datos demo
-psql "$SUPABASE_DB_URL" -f .sitiohoy/launch/seed-demo-data.sql
+# El seed demo ya fue escrito en supabase/migrations/003_seed_demo_data.sql.
+# Cualquier cambio posterior se aplica con Supabase CLI, no con SQL Editor.
+supabase db push
 
 # 5) Vercel
 vercel link --yes --project ${repo}
@@ -337,6 +372,10 @@ vercel env pull .env.vercel.local
 # Cargar variables desde .sitiohoy/launch/vercel-env.example con vercel env add o dashboard.
 vercel deploy
 vercel deploy --prod
+
+# 6) QA visual final
+# Levantar servidor local o usar preview/production URL y revisar .sitiohoy/qa/visual/
+SITE_URL="${siteUrl || `https://${repo}.vercel.app`}" npm run sitiohoy:visual-audit
 `
 
 const launchPlan = `# Launch Plan - ${project}
@@ -355,14 +394,15 @@ const launchPlan = `# Launch Plan - ${project}
 
 1. Revisar QA final.
 2. Crear repo GitHub y hacer push inicial.
-3. Crear proyecto Supabase y aplicar migraciones.
+3. Crear/vincular proyecto Supabase con CLI y aplicar migraciones con \`supabase db push\`.
 4. Ejecutar provisioning tenant/admin.
-5. Cargar productos demo para validar diseño.
+5. Cargar productos demo con imágenes Unsplash vía migración \`003_seed_demo_data.sql\`.
 6. Importar repo en Vercel.
 7. Cargar env vars en Vercel.
 8. Deploy preview.
 9. Deploy production.
-10. Configurar dominio, webhooks y compra/formulario de prueba.
+10. Ejecutar auditoría visual responsive con el sitio deployado o servidor local activo.
+11. Configurar dominio, webhooks y compra/formulario de prueba.
 
 ## Comandos
 
@@ -375,6 +415,9 @@ Ver \`.sitiohoy/launch/commands.sh\`.
 - [ ] Usuario admin existe en Supabase Auth.
 - [ ] \`user_tenants\` asocia admin con tenant como \`owner\`.
 - [ ] Productos demo se ven bien en home, catalogo y detalle.
+- [ ] \`SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit\` ejecutado sin errores y screenshots revisados.
+- [ ] Pesos/dimensiones de productos están cargados o marcados como estimados.
+- [ ] Cualquier cambio subido a Supabase se aplicó con Supabase CLI.
 - [ ] No hay secretos reales en Git.
 - [ ] Webhooks MercadoPago apuntan a Production si corresponde.
 `
@@ -385,6 +428,20 @@ await writeFile(path.join(outDir, 'vercel-env.example'), `${envExample}\n`)
 await writeFile(path.join(outDir, 'provision-supabase.mjs'), provisionScript)
 await writeFile(path.join(outDir, 'demo-products.json'), `${JSON.stringify(demoProducts, null, 2)}\n`)
 await writeFile(path.join(outDir, 'seed-demo-data.sql'), seedSql)
+await mkdir(path.join(root, 'supabase', 'migrations'), { recursive: true })
+await writeFile(path.join(root, 'supabase', 'migrations', '003_seed_demo_data.sql'), seedSql)
+await writeFile(path.join(outDir, 'admin-credentials.local.json'), `${JSON.stringify({ email: adminEmail, password: adminPassword, note: 'Credenciales admin generadas para provisioning. No commitear.' }, null, 2)}\n`)
+
+const gitignorePath = path.join(root, '.gitignore')
+const ignoredCredential = '.sitiohoy/launch/admin-credentials.local.json'
+if (existsSync(gitignorePath)) {
+  const gitignore = await readFile(gitignorePath, 'utf8')
+  if (!gitignore.includes(ignoredCredential)) {
+    await writeFile(gitignorePath, `${gitignore.trimEnd()}\n${ignoredCredential}\n`)
+  }
+} else {
+  await writeFile(gitignorePath, `${ignoredCredential}\n`)
+}
 await writeFile(configPath, `${JSON.stringify(updatedConfig, null, 2)}\n`)
 
 console.log('sitiohoy.config.json')
@@ -394,3 +451,5 @@ console.log('.sitiohoy/launch/vercel-env.example')
 console.log('.sitiohoy/launch/provision-supabase.mjs')
 console.log('.sitiohoy/launch/demo-products.json')
 console.log('.sitiohoy/launch/seed-demo-data.sql')
+console.log('.sitiohoy/launch/admin-credentials.local.json')
+console.log('supabase/migrations/003_seed_demo_data.sql')

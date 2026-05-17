@@ -22,26 +22,30 @@ En la raíz del proyecto:
 ## Salidas
 
 ```txt
-.sitiohoy/context/
-  project-context.md
-  module-0.md
-  module-1.md
-  ...
-  checkout-context.md        # si el plan tiene checkout
-  deploy-context.md
-  context-index.md
+.sitiohoy/
+  copy-guide.md              # generado por briefing
+  context/
+    project-context.md
+    module-0.md
+    module-1.md
+    ...
+    checkout-context.md        # si el plan tiene checkout
+    deploy-context.md
+    context-index.md
+    implementation-order.md  # secuencia optimizada de módulos
 
-.sitiohoy/design/
-  design-direction.md
-  design-tokens.seed.json
-  layout-recipe.md
-  anti-slop-checklist.md
+  design/
+    inspiration-board.md
+    design-direction.md
+    design-tokens.seed.json
+    layout-recipe.md
+    anti-slop-checklist.md
 ```
 
 ## Workflow
 
 1. Confirmar que existen `sitiohoy.config.json` y `brief.md`.
-2. Seleccionar templates de referencia (ver sección **Templates**).
+2. Seleccionar templates de referencia y referencias del cliente (ver sección **Templates**).
 3. Ejecutar:
    ```bash
    node scripts/generate-project-context.mjs
@@ -50,6 +54,7 @@ En la raíz del proyecto:
    - `brief.md`
    - `sitiohoy.config.json`
    - `.sitiohoy/context/module-N.md`
+   - `.sitiohoy/design/inspiration-board.md` si se escribe UI
    - `.sitiohoy/design/design-direction.md`
    - `.sitiohoy/design/layout-recipe.md` si se escribe UI
 5. Si el módulo es checkout, cargar también `.sitiohoy/context/checkout-context.md`.
@@ -58,8 +63,9 @@ En la raíz del proyecto:
 ## Templates de referencia
 
 El archivo `data/templates/index.json` contiene una biblioteca curada de templates
-open source relevantes para proyectos SitioHoy. Usarlos al generar `layout-recipe.md`
-y `design-direction.md` para anclar el diseño a referencias reales en vez de improvisar.
+open source relevantes para proyectos SitioHoy. El generador crea
+`.sitiohoy/design/inspiration-board.md` con referencias del cliente y referencias curadas
+según plan/rubro para anclar el diseño a ejemplos reales en vez de improvisar.
 
 ### Cómo seleccionar templates
 
@@ -72,7 +78,7 @@ que mejor correspondan al plan y rubro del cliente:
 | Emprendimiento | e-commerce mediano, nextjs-commerce, medusa starter |
 | Empresa | vercel-commerce, dub (multitenant), medusa completo |
 
-Agregar al `design-direction.md` una sección:
+Agregar o revisar en `inspiration-board.md` y `design-direction.md` una sección:
 
 ```md
 ## Referencias de layout
@@ -142,6 +148,16 @@ Al iniciar el diseño, indicarle a la skill:
 La skill lee las imágenes directamente y extrae paletas, tipografía,
 jerarquía visual y patrones de layout.
 
+## Component Seeds por Rubro
+
+El archivo `references/component-seeds.md` contiene una biblioteca de componentes
+recomendados según el rubro del negocio. Al generar el `design-brief-stitch.md` y
+los context packs, considerar estos seeds para:
+
+1. Sugerir componentes específicos del rubro en `layout-recipe.md`
+2. Alimentar a Stitch con estructuras base adecuadas al tipo de negocio
+3. Evitar diseños genéricos — cada rubro tiene patrones de conversión distintos
+
 ## Paralelización
 
 Estas tareas no dependen entre sí y pueden ejecutarse simultáneamente:
@@ -154,6 +170,7 @@ Estas tareas no dependen entre sí y pueden ejecutarse simultáneamente:
 - `context-index.md`
 
 **Grupo B — dirección visual** (independiente del Grupo A):
+- `inspiration-board.md`
 - `design-direction.md`
 - `design-tokens.seed.json`
 - `layout-recipe.md`
@@ -166,6 +183,24 @@ Estas tareas no dependen entre sí y pueden ejecutarse simultáneamente:
 Orden recomendado: lanzar Grupo A y Grupo B en paralelo.
 Lanzar Grupo C en paralelo con ambos si hay URLs de referencia disponibles.
 Esperar a que los tres grupos terminen antes de pasar al scaffold.
+
+## Integración con Stitch (Diseño)
+
+Después de generar los context packs, el diseño se crea con Stitch:
+
+1. Leer `.sitiohoy/design/design-brief-stitch.md`
+2. Enviar a Stitch via MCP (`batch_design`) con las especificaciones
+3. Stitch genera el diseño visual en archivos .pen
+4. Usar `get_screenshot` para ver el resultado
+5. Si necesita ajustes, usar `replace_all_matching_properties` o `set_variables`
+6. El diseño aprobado se usa como referencia pixel-perfect para implementación
+
+### Reglas de diseño con Stitch
+- SIEMPRE generar el design-brief-stitch.md antes de invocar Stitch
+- Cada página tiene su propio canvas en el .pen file
+- Revisar el screenshot antes de implementar
+- Los design tokens del .pen file se trasladan a tokens.css
+- No inventar diseño — implementar lo que Stitch generó
 
 ## Reglas
 

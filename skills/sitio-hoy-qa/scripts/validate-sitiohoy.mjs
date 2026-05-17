@@ -29,8 +29,16 @@ for (const file of codeFiles) {
     add('error', 'Usar next/image en lugar de <img>.', rel)
   }
 
+  if (/<select[\s>]/.test(text)) {
+    add('error', 'No usar <select> nativo. Usar dropdown custom con Controller de react-hook-form.', rel)
+  }
+
   if (/revalidatePath\(\s*['"]\/['"]\s*\)/.test(text)) {
     add('error', 'No usar revalidatePath global. Usar revalidateTag.', rel)
+  }
+
+  if (/revalidateTag\s*\(\s*[^,\n)]+\s*\)/.test(text)) {
+    add('error', "Next.js 16 requiere revalidateTag(tag, 'default').", rel)
   }
 
   if (/NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY/.test(text)) {
@@ -43,6 +51,18 @@ for (const file of codeFiles) {
 
   if (/dangerouslySetInnerHTML/.test(text) && !/JSON\.stringify/.test(text)) {
     add('warning', 'Revisar dangerouslySetInnerHTML. Solo deberia usarse para JSON-LD saneado.', rel)
+  }
+
+  if (/console\.log\s*\(/.test(text) && !rel.startsWith('scripts/')) {
+    add('warning', 'Remover console.log/debug antes de deploy.', rel)
+  }
+
+  if (/app\/.*productos/.test(rel) && /dynamic\s*=\s*['"]force-dynamic['"]/.test(text)) {
+    add('error', 'No usar dynamic = force-dynamic en catálogo. Usar ISR on-demand.', rel)
+  }
+
+  if (/app\/.*productos/.test(rel) && /revalidate\s*=\s*\d+/.test(text)) {
+    add('error', 'No usar revalidate = N en catálogo editable. Usar ISR on-demand.', rel)
   }
 }
 
@@ -59,6 +79,14 @@ for (const [file, message] of required) {
 
 if (!existsSync(path.join(root, '.env.example'))) {
   add('warning', 'Falta .env.example.', '.env.example')
+}
+
+if (!existsSync(path.join(root, '.sitiohoy', 'design', 'design-brief-stitch.md'))) {
+  add('warning', 'Falta .sitiohoy/design/design-brief-stitch.md. Los módulos visuales requieren diseño en Stitch.', '.sitiohoy/design/design-brief-stitch.md')
+}
+
+if (!existsSync(path.join(root, '.sitiohoy', 'copy-guide.md'))) {
+  add('warning', 'Falta .sitiohoy/copy-guide.md. Ejecutar briefing-server para generar la guía de copy.', '.sitiohoy/copy-guide.md')
 }
 
 const layoutPath = path.join(root, 'app', 'layout.tsx')

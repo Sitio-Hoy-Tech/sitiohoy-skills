@@ -28,16 +28,17 @@ No ejecutar deploy real si faltan QA, env vars o credenciales. Primero generar e
 ## Flujo
 
 1. Leer `sitiohoy.config.json`, `brief.md` y `.env.example`.
-2. Ejecutar el generador:
+2. Ejecutar el generador. Si no se pasa `--admin-email`, se usa automáticamente
+   `admin{slug-del-negocio}@sitiohoy.com.ar`:
    ```bash
-   node /ruta/a/sitio-hoy-launch-automation/scripts/generate-launch-plan.mjs --org ORG --repo REPO --domain dominio.com --admin-email admin@cliente.com
+   node /ruta/a/sitio-hoy-launch-automation/scripts/generate-launch-plan.mjs --org ORG --repo REPO --domain dominio.com
    ```
 3. Revisar `sitiohoy.config.json`: el generador completa `tenantId` y `siteUrl`.
 4. Revisar los artefactos en `.sitiohoy/launch/`.
 5. Ejecutar comandos por bloques:
    - GitHub: crear repo y push inicial.
-   - Supabase: aplicar migraciones, crear tenant, crear admin, asociar `user_tenants`.
-   - Demo data: insertar categorias/productos de prueba para validar diseño.
+   - Supabase: vincular proyecto con CLI, aplicar migraciones con `supabase db push`, crear tenant/admin, asociar `user_tenants`.
+   - Demo data: insertar categorias/productos de prueba con migración Supabase, no SQL Editor.
    - Vercel: link/import, cargar env vars, deploy preview y production.
 6. Configurar webhooks automáticamente:
    ```bash
@@ -46,6 +47,27 @@ No ejecutar deploy real si faltan QA, env vars o credenciales. Primero generar e
    El script registra el webhook de MercadoPago (planes Emprendimiento y Empresa),
    verifica Resend y Envia.com según plan, y guarda resultados en `.sitiohoy/launch/webhook-results.json`.
 7. Completar `launch-plan.md` antes de go-live.
+8. Ejecutar smoke tests de integraciones activas:
+   ```bash
+   npm run sitiohoy:test-supabase
+   npm run sitiohoy:test-mercadopago
+   npm run sitiohoy:test-envia
+   npm run sitiohoy:test-correo-argentino
+   npm run sitiohoy:test-resend
+   ```
+9. Ejecutar auditoría visual con servidor local/preview activo:
+   ```bash
+   SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit
+   ```
+10. Ejecutar `npm run sitiohoy:audit` antes de entregar. Cualquier error bloquea el go-live.
+
+## Pre-launch: Verificación de diseño
+
+Antes de deploy:
+- Confirmar que la implementación respeta el diseño de Stitch
+- Ejecutar `mcp__pencil__get_screenshot` de cada página del diseño
+- Comparar con screenshots de `npm run sitiohoy:visual-audit`
+- Si hay discrepancias mayores, resolver antes de deploy
 
 ## Artefactos generados
 
@@ -55,6 +77,8 @@ No ejecutar deploy real si faltan QA, env vars o credenciales. Primero generar e
 - `.sitiohoy/launch/provision-supabase.mjs`
 - `.sitiohoy/launch/demo-products.json`
 - `.sitiohoy/launch/seed-demo-data.sql`
+- `.sitiohoy/launch/admin-credentials.local.json` (gitignoreado)
+- `supabase/migrations/003_seed_demo_data.sql`
 - `.sitiohoy/launch/webhook-results.json` (generado por `setup-webhooks.mjs`)
 
 ## Imágenes demo
@@ -72,6 +96,9 @@ Para mejores resultados, agregar al `sitiohoy.config.json`:
 ```json
 { "keywords": "zapatería moda calzado" }
 ```
+
+Si el cliente no envió fotos, NO dejar placeholders genéricos salvo que se use `--no-images` por una razón documentada.
+Usar Unsplash con keywords relacionadas a rubro, categoría y producto. Registrar keyword/fuente en tracking.
 
 ## Paralelización
 
@@ -106,10 +133,12 @@ Excepción: el deploy final de Vercel requiere que el repo de GitHub exista prim
 
 - Nunca commitear secretos reales.
 - `SUPABASE_SERVICE_ROLE_KEY`, tokens MercadoPago, Resend y Envia van en env vars o tabla `tenants`, no en Git.
+- Usar Supabase CLI para migraciones, seeds y storage. No subir SQL o datos por Dashboard salvo bloqueo documentado.
 - El usuario admin se crea con Supabase Admin API, no insertando directo en `auth.users`.
+- El email admin debe ser `admin{slug-del-negocio}@sitiohoy.com.ar` y la contraseña debe ser aleatoria segura.
 - La fila `tenants` y la fila `user_tenants` deben existir antes de entregar el proyecto.
 - Los productos demo deben poder borrarse o reemplazarse sin romper diseño.
-- Si faltan CLIs (`gh`, `vercel`, `supabase`), dejar comandos alternativos manuales en el plan.
+- Si faltan CLIs (`gh`, `vercel`, `supabase`), instalar/configurar antes de ejecutar. Para Supabase no usar Dashboard como camino normal.
 
 ## Referencias
 

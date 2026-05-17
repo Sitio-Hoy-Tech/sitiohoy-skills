@@ -8,6 +8,8 @@ tipo: core — actualizar al finalizar CADA módulo, sin excepción
 
 > Registro interno de SitioHoy. No es parte del entregable al cliente.
 > El archivo `proyecto-tracking.json` va en la raíz del proyecto y en `.gitignore`.
+> Todas las fechas deben guardarse como ISO 8601 con offset Argentina `-03:00`
+> (`America/Argentina/Buenos_Aires`), nunca como `Z` UTC.
 
 ---
 
@@ -24,6 +26,7 @@ Crear `proyecto-tracking.json` con esta estructura base:
     "input": 0.003,
     "output": 0.015
   },
+  "timezone": "America/Argentina/Buenos_Aires",
   "inicio_proyecto": "[ISO 8601]",
   "fin_proyecto": null,
   "duracion_total_minutos": null,
@@ -62,6 +65,13 @@ Al completar el checklist ✅ de cada módulo, agregar un objeto al array `modul
   "costo_estimado_usd": 0,
   "archivos_creados": [],
   "archivos_modificados": [],
+  "comandos_ejecutados": [],
+  "checks_completados": [],
+  "decisiones": [],
+  "datos_estimados": [],
+  "integraciones_verificadas": [],
+  "qa_resultado": "",
+  "bloqueos": [],
   "notas": ""
 }
 ```
@@ -77,8 +87,24 @@ node scripts/update-tracking.mjs --modulo N --nombre "Nombre del Módulo"
 El script:
 1. Lee `proyecto-tracking.json` existente
 2. Detecta archivos creados/modificados con `git diff --name-only HEAD~1` o `git status --short`
-3. Registra timestamps y calcula duración automáticamente
+3. Registra timestamps `-03:00` y calcula duración automáticamente
 4. Deja `tokens_*` en 0 para completar manualmente o con `/cost` en Claude Code CLI
+
+Para auditoría eficiente, completar los campos operativos cuando aplique:
+
+```bash
+node scripts/update-tracking.mjs \
+  --modulo N \
+  --nombre "Nombre del Módulo" \
+  --comandos "npm run build|npm run sitiohoy:validate|supabase db push" \
+  --checks "config_valid,brief_exists,supabase_schema_ready,validate_ok" \
+  --integraciones "mercadopago,correo-argentino,resend" \
+  --qa "build ok; validate ok" \
+  --datos-estimados "peso productos: 500g por defecto|imagenes Unsplash: keyword ferreteria herramientas" \
+  --decisiones "envios: Correo Argentino por cuenta del cliente" \
+  --bloqueos "faltan tokens MercadoPago produccion" \
+  --notas "Detalle breve verificable"
+```
 
 **Si usás Claude Code CLI:**
 Ejecutar `/cost` al finalizar el módulo — muestra tokens reales de la sesión.
@@ -155,6 +181,13 @@ Completar los campos raíz:
         "next.config.ts",
         "tsconfig.json"
       ],
+      "comandos_ejecutados": ["npm run build", "npm run sitiohoy:validate"],
+      "checks_completados": ["config_valid", "brief_exists", "tokens_css_exists", "supabase_schema_ready", "tracking_updated", "validate_ok"],
+      "decisiones": ["Paleta basada en rubro ferretería y logo del cliente"],
+      "datos_estimados": [],
+      "integraciones_verificadas": ["supabase"],
+      "qa_resultado": "build ok; validate ok",
+      "bloqueos": [],
       "notas": "Design system: verde oscuro #1B4332 + arena #F5F0E8. Fuente: Playfair Display + Inter."
     },
     {
@@ -177,6 +210,13 @@ Completar los campos raíz:
       "archivos_modificados": [
         "styles/tokens.css"
       ],
+      "comandos_ejecutados": ["npm run sitiohoy:validate"],
+      "checks_completados": ["header_ready", "footer_ready", "whatsapp_ready", "responsive_checked", "validate_ok"],
+      "decisiones": [],
+      "datos_estimados": [],
+      "integraciones_verificadas": ["whatsapp"],
+      "qa_resultado": "validate ok",
+      "bloqueos": [],
       "notas": "Header sticky con logo SVG. Menú hamburguesa en mobile. Botón WhatsApp flotante."
     }
   ]
@@ -198,5 +238,9 @@ proyecto-tracking.json
 
 - [ ] `proyecto-tracking.json` creado en Módulo 0 con datos base
 - [ ] Cada módulo actualizado al finalizar su checklist
+- [ ] Fechas en ISO 8601 con offset `-03:00`
+- [ ] Comandos, decisiones, QA, integraciones y bloqueos registrados cuando existan
+- [ ] `checks_completados` registrado según `.sitiohoy/checklists/module-checks.json`
+- [ ] Datos estimados marcados explícitamente (peso, dimensiones, imágenes Unsplash, precios demo)
 - [ ] `proyecto-tracking.json` en `.gitignore`
 - [ ] Totales completados al cerrar el proyecto

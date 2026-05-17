@@ -15,7 +15,10 @@ if (!existsSync(fullInputPath)) {
 const intake = JSON.parse(await readFile(fullInputPath, 'utf8'))
 
 const allowedPlans = new Set(['esencial', 'emprendimiento', 'empresa'])
-const plan = String(intake.plan ?? '').toLowerCase()
+const existingTenantPlan = String(intake.existingTenantLookup?.tenant?.plan ?? '').toLowerCase()
+const plan = allowedPlans.has(existingTenantPlan)
+  ? existingTenantPlan
+  : String(intake.plan ?? '').toLowerCase()
 
 if (!allowedPlans.has(plan)) {
   console.error('plan debe ser: esencial, emprendimiento o empresa')
@@ -39,27 +42,33 @@ const catalog = intake.catalog ?? {}
 const pages = intake.pages ?? {}
 const contact = intake.contact ?? {}
 const assets = intake.assets ?? {}
+const existingTenant = intake.existingTenantLookup?.tenant ?? null
+const isExistingClient = intake.clientStatus === 'existente' && intake.existingTenantId
 
-const projectName = business.name ?? 'SitioHoy'
-const projectSlug = business.slug || slugify(projectName)
+const projectName = existingTenant?.name || business.name || 'SitioHoy'
+const projectSlug = existingTenant?.slug || business.slug || slugify(projectName)
 const hasCheckout = plan === 'emprendimiento' || plan === 'empresa'
+const correoArgentino = plan === 'empresa' && Boolean(technical.correoArgentinoRequested)
+const envia = plan === 'empresa' && Boolean(technical.enviaRequested) && !correoArgentino
 
 const integrations = {
   mercadopago: hasCheckout,
-  fixedShipping: plan === 'emprendimiento',
-  envia: plan === 'empresa' && Boolean(technical.enviaRequested),
+  correoArgentino,
+  fixedShipping: plan === 'emprendimiento' || (plan === 'empresa' && !correoArgentino && !envia),
+  envia,
   resend: hasCheckout && Boolean(technical.resendRequested),
   umami: hasCheckout,
   whatsapp: true,
 }
 
-const siteUrl = domain.status === 'owned' && domain.value ? String(domain.value).replace(/\/$/, '') : ''
+const siteUrl = existingTenant?.url || (domain.status === 'owned' && domain.value ? String(domain.value).replace(/\/$/, '') : '')
 
 const config = {
   project: projectName,
   slug: projectSlug,
   plan,
-  tenantId: randomUUID(),  // generado automáticamente — se puede reemplazar por el ID real de Supabase
+  clientStatus: intake.clientStatus ?? 'nuevo',
+  tenantId: isExistingClient ? intake.existingTenantId : randomUUID(),  // generado automáticamente — se puede reemplazar por el ID real de Supabase
   siteUrl,
   domain,
   integrations,
@@ -87,10 +96,38 @@ if (!visualIdentity.logo?.available) missingAssets.push('logo')
 if (visualIdentity.photoQuality === 'none') missingAssets.push('hero/productos')
 
 const yesNo = (value) => (value ? 'sí' : 'no')
-const list = (items) => (Array.isArray(items) && items.length ? items.join(', ') : 'ninguno')
+const list = (items) => (Array.isArray(items) && items.length
+  ? items.map((item) => {
+    if (typeof item === 'string') return item
+    if (item && typeof item === 'object') return [item.network, item.url].filter(Boolean).join(': ')
+    return ''
+  }).filter(Boolean).join(', ')
+  : 'ninguno')
+
+const tenantLookup = intake.existingTenantLookup
+const tenantLookupBlock = isExistingClient ? `
+## Tenant Existente
+
+- Tenant ID: ${intake.existingTenantId}
+- Consulta tenant: ${tenantLookup?.status ?? 'no realizada'}
+- Nombre cargado: ${existingTenant?.name ?? 'sin datos'}
+- Slug cargado: ${existingTenant?.slug ?? 'sin datos'}
+- Plan cargado: ${existingTenant?.plan ?? 'sin datos'}
+- Estado cargado: ${existingTenant?.status ?? 'sin datos'}
+- URL cargada: ${existingTenant?.url ?? 'sin datos'}
+- Contact email cargado: ${existingTenant?.contactEmail ?? 'sin datos'}
+- MercadoPago configurado: ${yesNo(existingTenant?.mercadoPagoConfigured)}
+- Resend configurado: ${yesNo(existingTenant?.resendConfigured)}
+- Envia configurado: ${yesNo(existingTenant?.enviaConfigured)}
+- Correo Argentino configurado: ${yesNo(existingTenant?.correoArgentinoConfigured)}
+- Umami configurado: ${yesNo(existingTenant?.umamiConfigured)}
+- Datos relacionados: productos ${existingTenant?.related?.products ?? 'n/d'}, categorias ${existingTenant?.related?.categories ?? 'n/d'}, zonas envio ${existingTenant?.related?.shipping_zones ?? 'n/d'}, pedidos ${existingTenant?.related?.orders ?? 'n/d'}
+${tenantLookup?.warnings?.length ? tenantLookup.warnings.map((warning) => `- Advertencia tenant: ${warning}`).join('\n') : ''}
+` : ''
 
 const brief = `# Brief - ${projectName}
 
+${tenantLookupBlock}
 ## Configuracion Tecnica
 
 - Plan: ${plan}
@@ -109,6 +146,7 @@ const brief = `# Brief - ${projectName}
 - Nombre: ${projectName}
 - Slug: ${projectSlug}
 - Rubro: ${business.industry ?? ''}
+- Objetivo principal: ${business.primaryGoal ?? ''}
 - Descripcion: ${business.description ?? ''}
 - Diferencial: ${business.differentiator ?? ''}
 - Referentes visuales: ${list(business.visualReferences)}
@@ -163,7 +201,7 @@ const brief = `# Brief - ${projectName}
 ## Decisiones Derivadas
 
 - CTA principal: ${hasCheckout ? 'comprar / ver catalogo' : 'WhatsApp / ver catalogo'}
-- Envio: ${integrations.envia ? 'Envia.com' : integrations.fixedShipping ? 'zonas fijas' : 'coordinar por WhatsApp'}
+- Envio: ${integrations.correoArgentino ? 'Correo Argentino directo' : integrations.envia ? 'Envia.com' : integrations.fixedShipping ? 'zonas fijas' : 'coordinar por WhatsApp'}
 - Checkout: ${hasCheckout ? 'activo' : 'no incluido'}
 - Schema base: completo en todos los planes
 - QA obligatorio: build + sitiohoy:validate por modulo, sitiohoy:qa antes de deploy

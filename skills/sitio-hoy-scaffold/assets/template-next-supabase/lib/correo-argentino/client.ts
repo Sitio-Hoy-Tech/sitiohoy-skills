@@ -4,40 +4,69 @@
  * ⚠️ LIMITACIÓN: La API es de pre-carga. NO genera etiquetas PDF.
  * El comerciante imprime etiquetas desde el portal web de MiCorreo.
  *
- * Credenciales: almacenadas en tabla `platform_config` (no en .env).
+ * Credenciales: user/password/token de plataforma en `platform_config` (no en .env).
+ * El customer_id del negocio vive en `tenants.correo_argentino_customer_id`.
  * Solo accesible con service role de Supabase.
  */
 import { createServiceClient } from '@/lib/supabase/server'
+import { env } from '@/lib/config/env'
 
 const CA_API = process.env.CA_API_URL ?? 'https://api.correoargentino.com.ar/micorreo/v1'
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
-async function getPlatformConfig() {
+async function getCorreoArgentinoConfig() {
   const supabase = createServiceClient()
-  const { data, error } = await supabase.from('platform_config').select('*').single()
-  if (error || !data) throw new Error('platform_config no encontrada. Ejecutar seed de Supabase.')
-  return data
+  const { data: tenant, error: tenantError } = await supabase
+    .from('tenants')
+    .select(`
+      id,
+      correo_argentino_customer_id,
+      origin_postal_code
+    `)
+    .eq('id', env.NEXT_PUBLIC_TENANT_ID)
+    .single()
+
+  if (tenantError || !tenant) throw new Error('Tenant no encontrado para Correo Argentino.')
+
+  const { data: platform, error: platformError } = await supabase
+    .from('platform_config')
+    .select(`
+      id,
+      correo_argentino_user,
+      correo_argentino_password,
+      correo_argentino_customer_id,
+      correo_argentino_token,
+      correo_argentino_token_expires_at
+    `)
+    .limit(1)
+    .single()
+
+  if (platformError || !platform) {
+    throw new Error('Credenciales de Correo Argentino no configuradas en platform_config.')
+  }
+
+  return { tenant, platform }
 }
 
 // ─── Token management ─────────────────────────────────────────────────────────
 
 export async function getCAToken(): Promise<string> {
-  const config = await getPlatformConfig()
+  const { platform } = await getCorreoArgentinoConfig()
 
-  if (config.correo_argentino_token && config.correo_argentino_token_expires_at) {
-    const expiresAt = new Date(config.correo_argentino_token_expires_at)
+  if (platform.correo_argentino_token && platform.correo_argentino_token_expires_at) {
+    const expiresAt = new Date(platform.correo_argentino_token_expires_at)
     if (expiresAt > new Date(Date.now() + 5 * 60 * 1000)) {
-      return config.correo_argentino_token
+      return platform.correo_argentino_token
     }
   }
 
-  if (!config.correo_argentino_user || !config.correo_argentino_password) {
+  if (!platform.correo_argentino_user || !platform.correo_argentino_password) {
     throw new Error('Credenciales de Correo Argentino no configuradas en platform_config.')
   }
 
   const credentials = Buffer.from(
-    `${config.correo_argentino_user}:${config.correo_argentino_password}`,
+    `${platform.correo_argentino_user}:${platform.correo_argentino_password}`,
   ).toString('base64')
 
   const res = await fetch(`${CA_API}/token`, {
@@ -48,15 +77,19 @@ export async function getCAToken(): Promise<string> {
   if (!res.ok) throw new Error(`Error obteniendo token CA: ${res.status}`)
 
   const { token, expires } = (await res.json()) as { token: string; expires: string }
+  const expiresDate = new Date(expires)
+  const expiresAt = Number.isNaN(expiresDate.getTime())
+    ? new Date(Date.now() + 60 * 60 * 1000)
+    : expiresDate
 
   const supabase = createServiceClient()
   await supabase
     .from('platform_config')
     .update({
       correo_argentino_token: token,
-      correo_argentino_token_expires_at: new Date(expires).toISOString(),
+      correo_argentino_token_expires_at: expiresAt.toISOString(),
     })
-    .eq('id', config.id)
+    .eq('id', platform.id)
 
   return token
 }
@@ -64,16 +97,16 @@ export async function getCAToken(): Promise<string> {
 // ─── Customer ID ──────────────────────────────────────────────────────────────
 
 export async function getCACustomerId(): Promise<string> {
-  const config = await getPlatformConfig()
-  if (config.correo_argentino_customer_id) return config.correo_argentino_customer_id
+  const { tenant, platform } = await getCorreoArgentinoConfig()
+  if (tenant.correo_argentino_customer_id) return tenant.correo_argentino_customer_id
 
   const token = await getCAToken()
   const res = await fetch(`${CA_API}/users/validate`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      email: config.correo_argentino_user,
-      password: config.correo_argentino_password,
+      email: platform.correo_argentino_user,
+      password: platform.correo_argentino_password,
     }),
   })
 
@@ -83,9 +116,9 @@ export async function getCACustomerId(): Promise<string> {
 
   const supabase = createServiceClient()
   await supabase
-    .from('platform_config')
+    .from('tenants')
     .update({ correo_argentino_customer_id: customerId })
-    .eq('id', config.id)
+    .eq('id', tenant.id)
 
   return customerId
 }

@@ -1,76 +1,70 @@
 # Cuestionario SitioHoy
 
-Enviar todo junto. No hacer preguntas separadas salvo que falte un dato bloqueante.
+Usar el formulario web de 7 pasos. No hacer preguntas por consola salvo que falte
+un dato bloqueante para decidir plan, checkout, envíos o dominio.
 
-## 1. Plan y alcance técnico
+## 1. Plan y alcance
 
-1. ¿Qué plan vas a contratar?
-   - Esencial: catálogo + WhatsApp
-   - Emprendimiento: tienda con MercadoPago + envíos fijos
-   - Empresa: tienda completa con MercadoPago + Envia.com opcional
-2. ¿Tenés MercadoPago activo?
-3. Para Empresa: ¿cómo vas a gestionar los envíos?
-   - **Correo Argentino directo** (cotización en tiempo real + pre-registro automático, sin costo extra — usa la cuenta SitioHoy): el comerciante imprime las etiquetas desde el portal web de MiCorreo
-   - **Envia.com** (cotización en tiempo real + etiquetas PDF automáticas, multicarrier): requiere cuenta Envia.com propia del cliente + token API
-   - **Precios fijos por zona** (vos definís el costo por provincia o región): más simple, sin integración externa
-   - **Sin envíos** (solo retiro en local o producto digital)
-4. ¿Necesitás emails automáticos al comprador?
-5. ¿Tenés dominio propio? Si sí, ¿cuál?
-6. ¿Con qué IA/editor estás trabajando?
-7. ¿Tenés MCP de Supabase configurado?
-8. ¿Tenés AIDesigner MCP disponible?
+- Estado del cliente: nuevo o existente.
+- Si es existente: tenant ID. Al enviar, consultar `public.tenants` para recuperar
+  plan, nombre, slug, URL, email de contacto e integraciones configuradas, porque
+  esos datos cargados en el tenant tienen prioridad sobre defaults del formulario.
+- Plan: Esencial, Emprendimiento o Empresa.
+- Para Empresa: proveedor de envíos.
+  - Correo Argentino directo: MiCorreo propio del cliente.
+  - Envia.com: cuenta propia y token API.
+  - Precios fijos por zona: sin integración externa.
+  - Sin envíos: retiro, coordinación manual o digital.
+- MercadoPago activo.
+- Emails automáticos con Resend.
+- Dominio: existente o pendiente de compra.
+- IA/editor y MCPs disponibles: Supabase y AIDesigner.
 
-## 2. Negocio
+## 2. Negocio y cliente
 
-1. Nombre del negocio.
-2. Rubro.
-3. Descripción en 1-2 oraciones.
-4. Diferencial frente a la competencia.
-5. Referentes o competidores que admire visualmente.
+- Nombre del negocio.
+- Rubro.
+- Objetivo principal del sitio: vender online, recibir consultas, mostrar catálogo,
+  generar confianza o captar leads/reservas.
+- Qué vende, para quién y por qué lo eligen.
+- Diferencial competitivo.
+- Cliente ideal.
+- Necesidad o problema que resuelve.
+- Sensación deseada al entrar al sitio.
+- Tono de comunicación.
+- Dispositivo principal.
+- Referentes visuales o competidores.
 
-## 3. Cliente ideal
+## 3. Catálogo
 
-1. Perfil de cliente: edad, género, intereses, nivel socioeconómico.
-2. Problema que resuelve.
-3. Sensación deseada al entrar al sitio.
-4. Tono de comunicación.
+- Cantidad inicial de productos, servicios o ítems.
+- Tipo: físico, digital, servicio o mixto.
+- Categorías principales.
+- Variantes: talle, color, medida, sabor u otra.
+- Rango de precios.
+- Para físicos o mixtos: peso promedio y medidas promedio.
+- Si no se sabe el peso, usar 500 g como estimación y marcarlo en notas.
 
-## 4. Identidad visual
+## 4. Diseño
 
-1. Colores de marca: principal, secundario, acento.
-2. Si no hay colores: sensación deseada.
-3. Estilo visual: minimalista, colorido, corporativo, vintage, artesanal, tech, lujo.
-4. Logo disponible y formato.
-5. Calidad de fotos.
-6. Dispositivo principal de compra/consulta.
+- Colores de marca definidos o tonos deseados.
+- Mood visual.
+- Estilo: minimalista, colorido, corporativo, artesanal, tech o premium.
+- Logo disponible y formato.
+- Calidad de fotos: profesionales, celular, proveedor o sin fotos.
 
-## 5. Catálogo
+## 5. Contenido y contacto
 
-1. Cantidad inicial de productos/servicios.
-2. Categorías.
-3. Variantes.
-4. Rango de precios.
-5. Tipo: físico, digital o servicio.
+- Páginas necesarias: sobre nosotros, FAQ, contacto, legales, blog.
+- WhatsApp.
+- Email público.
+- Redes sociales.
+- Red principal.
+- Nivel de animación: sin animaciones, sutiles o expresivas.
 
-## 6. Páginas
+## 6. Assets
 
-Marcar las necesarias:
-- Sobre nosotros
-- FAQ
-- Contacto con formulario
-- Términos / privacidad / devoluciones
-- Blog / novedades
-
-## 7. Contacto y redes
-
-1. WhatsApp.
-2. Email público.
-3. Redes sociales.
-4. Red principal.
-
-## 8. Assets
-
-Confirmar estructura:
+Estructura esperada:
 
 ```txt
 _assets-cliente/
@@ -82,21 +76,22 @@ _assets-cliente/
 ```
 
 Reglas:
+
 - nombres en minúsculas con guiones;
 - JPG/WebP para fotos;
 - PNG/SVG para logo;
 - hero mínimo 1200 px;
-- productos mínimo 800 px.
+- productos mínimo 800 px;
+- si no hay fotos de productos, usar imágenes Unsplash relacionadas al
+  rubro/categoría/producto hasta recibir fotos reales.
 
-## 9. Animaciones
+## 7. Revisión
 
-¿Qué nivel de animación querés para el sitio?
-- **Muchas**: hero animado, transiciones entre páginas, elementos que aparecen con movimiento
-- **Pocas y sutiles**: fade-in al hacer scroll, hover effects, transiciones suaves (recomendado para la mayoría de los rubros)
-- **Sin animaciones**: solo CSS estático
+Antes de enviar, confirmar:
 
-## 10. Logo SitioHoy
-
-Para el crédito "Desarrollado por SitioHoy" en el footer, confirmar la ruta del logo:
-- ¿Dónde está el archivo `logo-sitiohoy.png`? (ejemplo: `_assets-cliente/logo-sitio-hoy-con-fondo.png`)
-- Si no está disponible, pedirlo antes de construir el footer.
+- plan e integraciones;
+- objetivo principal;
+- negocio, cliente y tono;
+- catálogo, categorías, peso y dimensiones;
+- páginas, contacto y redes;
+- assets disponibles y faltantes.

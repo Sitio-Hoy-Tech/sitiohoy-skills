@@ -4,9 +4,17 @@
 
 - Schema completo en todos los planes para permitir upgrades.
 - `tenants` guarda credenciales por cliente: MercadoPago, Resend, Envia.com y Umami.
+- `platform_config` guarda credenciales de plataforma, incluyendo usuario/password/token de Correo Argentino.
+- `tenants.correo_argentino_customer_id` identifica al negocio en Correo Argentino.
 - `.env` solo guarda infraestructura, tenant activo y secrets de webhooks.
+- `tenants.url` y `tenants.revalidation_secret` son obligatorios para ISR on-demand multitenant.
+- Triggers ISR leen URL/secret desde `tenants`; no hardcodear dominios ni usar `supabase_functions.http_request`.
 - `contact_messages` conserva leads aunque Resend no este activo.
+- `tenants.contact_email` es el destino de consultas del negocio; no usar `RESEND_TO_EMAIL`.
 - `order_events` y `payment_events` son auditoria, no UI principal.
+- `orders.status` nace con constraint completo para pagos, fulfillment y devoluciones.
+- `products.stock` y `products.stock_unlimited` existen para productos sin variantes.
+- `products.weight_grams` y dimensiones existen para cotizar envíos; si son estimados deben quedar documentados en tracking.
 
 ## Campos que no deben renombrarse
 
@@ -16,6 +24,10 @@
 - `orders.mp_payment_id`, no `payment_id`.
 - `tenants.umami_url` es URL del script.
 - `tenants.umami_website_id` es el website id.
+- `tenants.revalidation_secret` es el secret de `/api/revalidate`, no una env var global.
+- `platform_config.correo_argentino_user/password/token` son credenciales de plataforma, no por cliente.
+- `tenants.correo_argentino_customer_id` es por cliente.
+- `products.weight_grams`, no `weight` ni `peso`.
 
 ## FKs duplicadas — problema conocido
 

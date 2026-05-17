@@ -10,6 +10,8 @@ Al terminar todos los módulos del plan, usar primero `sitio-hoy-qa`:
 
 ```bash
 npm run sitiohoy:qa
+SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit
+SITE_URL=http://localhost:3000 npm run sitiohoy:e2e
 npm run sitiohoy:qa-report
 ```
 
@@ -46,6 +48,10 @@ La columna "Manual ✅" queda vacía para que el humano la complete.
 | El sitio se ve correctamente en 390px (iPhone 14) | [auto] | | 🔴 |
 | El sitio se ve correctamente en 768px (tablet) | [auto] | | 🔴 |
 | El sitio se ve correctamente en 1280px (desktop) | [auto] | | 🔴 |
+| El sitio se ve correctamente en 1920px (desktop grande) | [auto] | | 🔴 |
+| No hay overflow horizontal ni textos cortados | [auto] | | 🔴 |
+| Screenshots en `.sitiohoy/qa/visual/` revisados | [auto] | | 🔴 |
+| Imágenes de producto/hero no están rotas ni son genéricas | [auto] | | 🔴 |
 | El hero es visualmente único y no genérico | [auto] | | 🔴 |
 | El layout del catálogo está diferenciado | [auto] | | 🟡 |
 | Dark mode funciona correctamente | [auto] | | 🟡 |
@@ -53,7 +59,7 @@ La columna "Manual ✅" queda vacía para que el humano la complete.
 | Todas las fuentes cargan con next/font | [auto] | | 🔴 |
 | Touch targets ≥ 44px en mobile | [auto] | | 🔴 |
 | Animaciones respetan prefers-reduced-motion | [auto] | | 🟡 |
-| Score diseño ≥ 7/10 en las 10 dimensiones | [auto] | | 🔴 |
+| Score diseño ≥ 8/10 en las 10 dimensiones | [auto] | | 🔴 |
 
 ---
 
@@ -67,6 +73,7 @@ La columna "Manual ✅" queda vacía para que el humano la complete.
 | Página de detalle de producto carga | [auto] | | 🔴 |
 | Galería de imágenes funciona | [auto] | | 🔴 |
 | Variantes de producto actualizan precio/stock | [auto] | | 🔴 |
+| Productos físicos tienen peso/dimensiones o defaults estimados registrados | [manual] | revisar `products.weight_grams` y tracking | 🔴 |
 | Botón "Consultar por WhatsApp" redirige correctamente | [auto] | | 🔴 |
 | Breadcrumbs funcionan | [auto] | | 🟡 |
 | Página 404 personalizada funciona | [auto] | | 🟡 |
@@ -82,6 +89,7 @@ La columna "Manual ✅" queda vacía para que el humano la complete.
 | Eliminar producto del carrito funciona | [auto] | | 🔴 |
 | Paso 1 checkout — datos del comprador válida | [auto] | | 🔴 |
 | Paso 2 checkout — selección de envío funciona | [auto] | | 🔴 |
+| Tenant tiene `origin_postal_code` cargado para cotizar envío | [auto] | revisar Supabase | 🔴 |
 | Paso 3 checkout — Payment Brick se renderiza | [auto] | | 🔴 |
 | Pago con tarjeta de prueba es aprobado | | ← probar manualmente | 🔴 |
 | Redirección a /checkout/success funciona | [auto] | | 🔴 |
@@ -132,6 +140,8 @@ La columna "Manual ✅" queda vacía para que el humano la complete.
 | RLS habilitado en todas las tablas de Supabase | [auto] | | 🔴 |
 | SUPABASE_SERVICE_ROLE_KEY no está en NEXT_PUBLIC_ | [auto] | | 🔴 |
 | Headers de seguridad configurados | [auto] | | 🟡 |
+| `console.log`/debug innecesarios removidos antes de deploy | [auto] | | 🔴 |
+| Secret scan sin credenciales en archivos commiteables | [auto] | | 🔴 |
 | Variables de entorno completas en Vercel | | ← verificar en dashboard | 🔴 |
 
 ---
@@ -147,6 +157,54 @@ La columna "Manual ✅" queda vacía para que el humano la complete.
 | Webhook MP apuntando a URL de producción | | ← verificar en MP dashboard | 🔴 |
 | Compra de prueba REAL aprobada | | ← hacer compra real | 🔴 |
 | Cliente tiene acceso al Vercel Dashboard | | ← enviar invitación | 🔴 |
+
+---
+
+## E2E — Flujo de usuario real
+
+- [ ] `npm run sitiohoy:e2e` corrió sin errores
+- [ ] Screenshots en 375/768/1280/1920 revisados manualmente
+- [ ] Menú mobile abre y muestra categorías
+- [ ] Se puede agregar un producto al carrito
+- [ ] Checkout carga sin errores JS en consola
+- [ ] Formulario de contacto visible y enviable
+- [ ] Ninguna ruta devuelve 404 o 500
+
+---
+
+## Pendientes para configurar en PRODUCCIÓN
+
+> La IA completa esta sección al terminar, antes de deployar.
+
+- [ ] Variables de Vercel Production cargadas y revisadas
+- [ ] `NEXT_PUBLIC_URL` usa `https://` del dominio final
+- [ ] MercadoPago usa credenciales de producción en `tenants`
+- [ ] Webhook MercadoPago apunta a producción y tiene `MP_WEBHOOK_SECRET`
+- [ ] Resend tiene SPF, DKIM y DMARC verificados para `sitiohoy.com.ar`
+- [ ] Envia/Correo Argentino configurados en modo producción si aplica
+- [ ] Dominio y SSL activos
+- [ ] Compra real de prueba realizada y reembolsada
+- [ ] Formulario de contacto enviado y recibido
+- [ ] Emails transaccionales revisados en inbox y spam
+
+---
+
+## Pruebas manuales antes de desplegar
+
+> La IA debe dejar un archivo/checklist con estas pruebas y marcar qué ya pudo verificar.
+
+- [ ] Home, catálogo, detalle, carrito, checkout, contacto, seguimiento, legales y 404 cargan sin 404/500
+- [ ] Navegación desktop y mobile completa
+- [ ] Filtros/categorías de catálogo funcionan
+- [ ] Variantes cambian precio/stock correctamente
+- [ ] Agregar, modificar cantidad y eliminar del carrito funciona
+- [ ] Checkout calcula subtotal, envío, descuento y total server-side
+- [ ] Compra de prueba con MercadoPago aprobada
+- [ ] Pedido queda en Supabase con estado correcto
+- [ ] Webhook actualiza estado y registra `payment_events`
+- [ ] Email de compra llega al comprador
+- [ ] Formulario de contacto guarda lead y envía emails
+- [ ] No hay errores JS en consola durante los flujos principales
 
 ---
 
@@ -188,9 +246,10 @@ Al generar el reporte, la IA debe:
 |---|---|---|
 | Build TypeScript | `npm run build` | Sí |
 | Reglas SitioHoy | `npm run sitiohoy:validate` | Sí |
+| Auditoría visual | `SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit` | Sí en módulos visuales y antes de deploy |
+| E2E usuario real | `SITE_URL=http://localhost:3000 npm run sitiohoy:e2e` | Sí antes de deploy |
 | QA completo | `npm run sitiohoy:qa` | Sí antes de deploy |
 | Reporte | `npm run sitiohoy:qa-report` | Sí antes de deploy |
-| E2E | `npm run test:e2e` si existe | Sí si checkout está activo |
 | Lighthouse | `npm run lighthouse` si existe | Sí antes de deploy |
 
 ## Leyenda de prioridades

@@ -16,6 +16,16 @@ import path from 'node:path'
 
 const root = process.cwd()
 const trackingPath = path.join(root, 'proyecto-tracking.json')
+const ARG_OFFSET_MS = 3 * 60 * 60 * 1000
+
+function argentinaISOString(date = new Date()) {
+  const shifted = new Date(date.getTime() - ARG_OFFSET_MS)
+  return `${shifted.toISOString().replace('Z', '')}-03:00`
+}
+
+function parseArgentinaDate(value) {
+  return new Date(value)
+}
 
 const args = new Map()
 for (let i = 2; i < process.argv.length; i++) {
@@ -38,7 +48,8 @@ if (!existsSync(trackingPath)) {
     plan: config.plan ?? 'esencial',
     modelo: process.env.AI_MODEL ?? 'claude-sonnet-4-6',
     precios_usd_por_1k_tokens: { input: 0.003, output: 0.015 },
-    inicio_proyecto: new Date().toISOString(),
+    timezone: 'America/Argentina/Buenos_Aires',
+    inicio_proyecto: argentinaISOString(),
     fin_proyecto: null,
     duracion_total_minutos: null,
     tokens_input_total: 0,
@@ -64,7 +75,7 @@ const tracking = JSON.parse(await readFile(trackingPath, 'utf8'))
 // ── Cierre de proyecto ────────────────────────────────────────────────────────
 if (args.get('cierre')) {
   const mods = tracking.modulos
-  tracking.fin_proyecto = new Date().toISOString()
+  tracking.fin_proyecto = argentinaISOString()
   tracking.duracion_total_minutos = mods.reduce((s, m) => s + (m.duracion_minutos ?? 0), 0)
   tracking.tokens_input_total = mods.reduce((s, m) => s + (m.tokens_input_estimados ?? 0), 0)
   tracking.tokens_output_total = mods.reduce((s, m) => s + (m.tokens_output_estimados ?? 0), 0)
@@ -95,7 +106,7 @@ let archivos_creados = []
 let archivos_modificados = []
 try {
   // Archivos sin stagear + stageados
-  const gitStatus = execSync('git status --short', { cwd: root, encoding: 'utf8' })
+  const gitStatus = execSync('git status --short', { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
   for (const line of gitStatus.trim().split('\n').filter(Boolean)) {
     const status = line.substring(0, 2).trim()
     const file = line.substring(3).trim()
@@ -105,7 +116,7 @@ try {
 } catch {
   // fallback: diff con commit anterior
   try {
-    const diff = execSync('git diff --name-only HEAD~1', { cwd: root, encoding: 'utf8' })
+    const diff = execSync('git diff --name-only HEAD~1', { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
     archivos_modificados = diff.trim().split('\n').filter(Boolean)
   } catch { /* sin git o primer commit */ }
 }
@@ -114,7 +125,7 @@ try {
 const now = new Date()
 const prevMod = tracking.modulos[tracking.modulos.length - 1]
 const inicio = prevMod?.fin ?? tracking.inicio_proyecto
-const duracion_minutos = Math.round((now - new Date(inicio)) / 60000)
+const duracion_minutos = Math.max(0, Math.round((now - parseArgentinaDate(inicio)) / 60000))
 
 // Calcular costo
 const p = tracking.precios_usd_por_1k_tokens
@@ -128,14 +139,21 @@ const entry = {
   modulo: moduloNum,
   nombre,
   inicio,
-  fin: now.toISOString(),
+  fin: argentinaISOString(now),
   duracion_minutos,
   tokens_input_estimados: tokensInput,
   tokens_output_estimados: tokensOutput,
   costo_estimado_usd: costo,
   archivos_creados,
   archivos_modificados,
-  notas: '',
+  comandos_ejecutados: args.get('comandos') ? String(args.get('comandos')).split('|').map(s => s.trim()).filter(Boolean) : [],
+  checks_completados: args.get('checks') ? String(args.get('checks')).split(',').map(s => s.trim()).filter(Boolean) : [],
+  decisiones: args.get('decisiones') ? String(args.get('decisiones')).split('|').map(s => s.trim()).filter(Boolean) : [],
+  datos_estimados: args.get('datos-estimados') ? String(args.get('datos-estimados')).split('|').map(s => s.trim()).filter(Boolean) : [],
+  integraciones_verificadas: args.get('integraciones') ? String(args.get('integraciones')).split(',').map(s => s.trim()).filter(Boolean) : [],
+  qa_resultado: args.get('qa') ?? '',
+  bloqueos: args.get('bloqueos') ? String(args.get('bloqueos')).split('|').map(s => s.trim()).filter(Boolean) : [],
+  notas: args.get('notas') ?? '',
 }
 
 if (existingIdx >= 0) {

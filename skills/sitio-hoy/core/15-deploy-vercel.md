@@ -20,6 +20,8 @@ Antes de crear el proyecto en Vercel, usar `sitio-hoy-launch-automation` para ge
 
 Este paso prepara GitHub, Supabase, tenant/admin, productos demo y variables de Vercel.
 No reemplaza la revisión final; ordena la ejecución y evita olvidos.
+Todo lo que se suba a Supabase debe aplicarse con Supabase CLI (`supabase link`,
+`supabase db push`, `supabase gen types`, `supabase storage` si corresponde).
 
 ---
 
@@ -181,10 +183,28 @@ export default nextConfig
 
 ```bash
 npm run build
+npm run sitiohoy:secret-scan
+npm run sitiohoy:test-supabase
+npm run sitiohoy:test-mercadopago
+npm run sitiohoy:test-envia
+npm run sitiohoy:test-correo-argentino
+npm run sitiohoy:test-resend
+SITE_URL=http://localhost:3000 npm run sitiohoy:visual-audit
+SITE_URL=http://localhost:3000 npm run sitiohoy:e2e
+npm run sitiohoy:audit
 ```
 
-El build debe completarse sin errores de TypeScript ni warnings críticos.
+Para la auditoría visual, levantar el servidor local o production build, correr el comando y apagar el servidor al terminar.
+El build, secret scan, smoke tests activos, auditoría visual, E2E y auditoría final deben completarse sin errores críticos.
 Si hay errores de tipos → corregir antes de deployar.
+
+Antes de deployar, limpiar el proyecto sin romper comportamiento:
+
+- eliminar `console.log`/debug temporales y dejar solo `console.error` útil para errores operativos;
+- correr `npm run sitiohoy:secret-scan`;
+- verificar que ninguna credencial esté en archivos commiteables, screenshots, README o tracking;
+- revisar Client Components para no exponer service role, tokens privados ni payloads sensibles;
+- confirmar que logs de webhooks no impriman datos de tarjeta, access tokens ni secrets.
 
 ---
 
@@ -193,10 +213,11 @@ Si hay errores de tipos → corregir antes de deployar.
 **Infraestructura**
 - [ ] `.sitiohoy/launch/launch-plan.md` generado y revisado
 - [ ] Repo GitHub creado en la organización correcta
-- [ ] Migraciones Supabase aplicadas
+- [ ] Migraciones Supabase aplicadas con Supabase CLI
 - [ ] Fila `tenants` creada/actualizada
-- [ ] Usuario admin creado y asociado en `user_tenants`
-- [ ] Productos demo o reales cargados para validar diseño
+- [ ] Usuario admin `admin{slug-del-negocio}@sitiohoy.com.ar` creado con contraseña segura y asociado en `user_tenants`
+- [ ] Productos demo o reales cargados para validar diseño, con peso/dimensiones si hay envíos
+- [ ] Si faltaron fotos del cliente, productos cargados con imágenes Unsplash relacionadas y registrado en tracking
 - [ ] Proyecto creado en Vercel con región SAO1
 - [ ] Todas las env vars cargadas en Vercel (Production)
 - [ ] `NEXT_PUBLIC_URL` apunta al dominio final con `https://`
@@ -208,6 +229,9 @@ Si hay errores de tipos → corregir antes de deployar.
 - [ ] Webhook configurado en MP con la URL de producción
 - [ ] `MP_WEBHOOK_SECRET` actualizado en Vercel
 - [ ] `ENVIA_API_URL` sin `-test` (solo Plan Empresa)
+- [ ] Smoke test MercadoPago ejecutado si está activo
+- [ ] Smoke test Envia/Correo Argentino ejecutado según proveedor activo
+- [ ] Smoke test Resend ejecutado si está activo
 
 **Funcionalidad**
 - [ ] Home carga en < 3s en mobile (red 4G)
@@ -227,3 +251,7 @@ Si hay errores de tipos → corregir antes de deployar.
 - [ ] Acceso al dashboard de Vercel transferido al cliente (o documentado)
 - [ ] Instrucciones de uso del panel admin enviadas
 - [ ] Reporte QA generado (`QA-[negocio]-[fecha].md`)
+- [ ] Auditoría visual responsive OK con screenshots 375/390/768/1280/1920 revisados
+- [ ] E2E usuario real OK con screenshots 375/768/1280/1920 revisados
+- [ ] Archivo/checklist de pendientes PROD y pruebas manuales completado
+- [ ] Auditoría generada (`AUDIT-SitioHoy-[negocio]-[fecha].md`)

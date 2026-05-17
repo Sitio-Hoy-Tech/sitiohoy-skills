@@ -24,19 +24,36 @@ plan = plan || 'esencial'
 // Leer config del negocio para el seed
 let businessName = 'Mi Negocio'
 let tenantSlug = 'mi-negocio'
+let siteUrl = ''
 if (existsSync(path.join(root, 'sitiohoy.config.json'))) {
   const config = JSON.parse(await readFile(path.join(root, 'sitiohoy.config.json'), 'utf8'))
   if (config.business?.name) businessName = config.business.name
   if (config.business?.slug) tenantSlug = config.business.slug
+  if (config.siteUrl) siteUrl = config.siteUrl
+  if (!siteUrl && config.domain?.url) siteUrl = config.domain.url
 }
 
 // Generar contraseña segura para el usuario admin
 const adminPassword = randomBytes(16).toString('base64url')
-const adminEmail = 'admin@sitiohoy.com.ar'
+const adminEmailLocal = `admin${tenantSlug || 'cliente'}`
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9-]+/g, '-')
+  .replace(/^-|-$/g, '')
+const adminEmail = `${adminEmailLocal}@sitiohoy.com.ar`
+const sqlString = (value) => String(value ?? '').replaceAll("'", "''")
+const revalidationSecret = randomBytes(32).toString('hex')
 
 // Guardar credenciales en archivo gitignoreado
 const credentialsPath = path.join(root, 'credentials.local.json')
-const credentials = { email: adminEmail, password: adminPassword, role: 'owner', note: 'Credenciales del usuario admin generadas por generate-supabase-migration. NO SUBIR A GIT.' }
+const credentials = {
+  email: adminEmail,
+  password: adminPassword,
+  role: 'owner',
+  revalidation_secret: revalidationSecret,
+  note: 'Credenciales del usuario admin y secret ISR generadas por generate-supabase-migration. NO SUBIR A GIT.',
+}
 await writeFile(credentialsPath, JSON.stringify(credentials, null, 2) + '\n')
 
 // Asegurar que credentials.local.json esté en .gitignore
@@ -59,6 +76,8 @@ const sql = `-- SitioHoy initial schema
 -- Generado: ${new Date().toISOString()}
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS pg_net SCHEMA extensions;
 
 CREATE OR REPLACE FUNCTION public.get_tenant_id()
 RETURNS uuid LANGUAGE sql STABLE AS $$
@@ -81,10 +100,13 @@ CREATE TABLE IF NOT EXISTS public.tenants (
   status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'cancelled')),
   max_products integer NOT NULL DEFAULT 50,
   url text,
+  revalidation_secret text,
   mp_access_token text,
   mp_public_key text,
   resend_api_key text,
+  contact_email text,
   envia_access_token text,
+  correo_argentino_customer_id text,
   umami_url text,
   umami_website_id text,
   origin_name text,
@@ -99,24 +121,6 @@ CREATE TABLE IF NOT EXISTS public.tenants (
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
-
--- Configuración de la plataforma SitioHoy (singleton — una sola fila)
--- Sin políticas RLS = solo service role puede acceder (no anon, no auth)
-CREATE TABLE IF NOT EXISTS public.platform_config (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  -- Correo Argentino MiCorreo (cuenta compartida SitioHoy — misma para todos los tenants)
-  correo_argentino_user text,
-  correo_argentino_password text,
-  correo_argentino_customer_id text,            -- obtenido una vez via /users/validate
-  correo_argentino_token text,                  -- JWT cacheado
-  correo_argentino_token_expires_at timestamptz,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-
-CREATE TRIGGER set_platform_config_updated_at
-  BEFORE UPDATE ON public.platform_config
-  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 CREATE TABLE IF NOT EXISTS public.user_tenants (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -156,6 +160,13 @@ CREATE TABLE IF NOT EXISTS public.products (
   description text,
   price numeric(10,2) NOT NULL CHECK (price >= 0),
   compare_at_price numeric(10,2),
+  stock integer DEFAULT 0 CHECK (stock >= 0),
+  stock_unlimited boolean DEFAULT false,
+  weight_grams integer DEFAULT 500 CHECK (weight_grams IS NULL OR weight_grams > 0),
+  length_cm numeric(10,2) DEFAULT 20 CHECK (length_cm IS NULL OR length_cm > 0),
+  width_cm numeric(10,2) DEFAULT 15 CHECK (width_cm IS NULL OR width_cm > 0),
+  height_cm numeric(10,2) DEFAULT 8 CHECK (height_cm IS NULL OR height_cm > 0),
+  shipping_required boolean DEFAULT true,
   category_id uuid REFERENCES public.categories(id),
   active boolean DEFAULT true,
   featured boolean DEFAULT false,
@@ -189,7 +200,13 @@ CREATE TABLE IF NOT EXISTS public.product_variants (
 CREATE TABLE IF NOT EXISTS public.orders (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-  status text DEFAULT 'pending',
+  status text DEFAULT 'pending' CONSTRAINT orders_status_check CHECK (
+    status IN (
+      'pending', 'pending_payment', 'paid', 'payment_failed',
+      'processing', 'confirmed', 'shipped', 'delivered',
+      'cancelled', 'refunded'
+    )
+  ),
   payment_status text DEFAULT 'pending',
   mp_payment_id text,
   payment_provider text DEFAULT 'mercadopago',
@@ -284,6 +301,17 @@ CREATE TABLE IF NOT EXISTS public.payment_events (
   created_at timestamptz DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS public.platform_config (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  correo_argentino_user text,
+  correo_argentino_password text,
+  correo_argentino_customer_id text,
+  correo_argentino_token text,
+  correo_argentino_token_expires_at timestamptz,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
 DROP TRIGGER IF EXISTS trg_tenants_updated_at ON public.tenants;
 CREATE TRIGGER trg_tenants_updated_at BEFORE UPDATE ON public.tenants
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
@@ -294,6 +322,10 @@ CREATE TRIGGER trg_products_updated_at BEFORE UPDATE ON public.products
 
 DROP TRIGGER IF EXISTS trg_orders_updated_at ON public.orders;
 CREATE TRIGGER trg_orders_updated_at BEFORE UPDATE ON public.orders
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_platform_config_updated_at ON public.platform_config;
+CREATE TRIGGER trg_platform_config_updated_at BEFORE UPDATE ON public.platform_config
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 CREATE INDEX IF NOT EXISTS idx_products_tenant_active ON public.products(tenant_id, active);
@@ -322,6 +354,7 @@ ALTER TABLE public.shipping_zones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.contact_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.order_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.platform_config ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "own_tenant_select" ON public.tenants;
 CREATE POLICY "own_tenant_select" ON public.tenants FOR SELECT TO authenticated
@@ -373,6 +406,97 @@ CREATE POLICY "public_assets_tenant_insert" ON storage.objects FOR INSERT TO aut
     bucket_id = 'public_assets'
     AND (storage.foldername(name))[1] = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')
   );
+
+CREATE OR REPLACE FUNCTION public.isr_notify(p_tenant_id uuid, p_table text, p_slug text DEFAULT NULL)
+RETURNS void LANGUAGE plpgsql SECURITY DEFINER AS $$
+DECLARE
+  _url    text;
+  _secret text;
+  _body   jsonb;
+BEGIN
+  SELECT url, revalidation_secret
+    INTO _url, _secret
+    FROM public.tenants
+   WHERE id = p_tenant_id;
+
+  IF _url IS NULL OR _secret IS NULL THEN RETURN; END IF;
+
+  IF p_slug IS NOT NULL THEN
+    _body := jsonb_build_object('table', p_table, 'slug', p_slug);
+  ELSE
+    _body := jsonb_build_object('table', p_table);
+  END IF;
+
+  PERFORM net.http_post(
+    url     := _url || '/api/revalidate',
+    body    := _body,
+    headers := jsonb_build_object(
+      'Content-Type',  'application/json',
+      'Authorization', 'Bearer ' || _secret
+    )
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.trigger_isr_products()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  PERFORM public.isr_notify(COALESCE(NEW.tenant_id, OLD.tenant_id), 'products', COALESCE(NEW.slug, OLD.slug));
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+DROP TRIGGER IF EXISTS isr_products ON public.products;
+CREATE TRIGGER isr_products
+AFTER INSERT OR UPDATE OR DELETE ON public.products
+FOR EACH ROW EXECUTE FUNCTION public.trigger_isr_products();
+
+CREATE OR REPLACE FUNCTION public.trigger_isr_product_images()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  PERFORM public.isr_notify(COALESCE(NEW.tenant_id, OLD.tenant_id), 'product_images');
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+DROP TRIGGER IF EXISTS isr_product_images ON public.product_images;
+CREATE TRIGGER isr_product_images
+AFTER INSERT OR UPDATE OR DELETE ON public.product_images
+FOR EACH ROW EXECUTE FUNCTION public.trigger_isr_product_images();
+
+CREATE OR REPLACE FUNCTION public.trigger_isr_product_variants()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  PERFORM public.isr_notify(COALESCE(NEW.tenant_id, OLD.tenant_id), 'product_variants');
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+DROP TRIGGER IF EXISTS isr_product_variants ON public.product_variants;
+CREATE TRIGGER isr_product_variants
+AFTER INSERT OR UPDATE OR DELETE ON public.product_variants
+FOR EACH ROW EXECUTE FUNCTION public.trigger_isr_product_variants();
+
+CREATE OR REPLACE FUNCTION public.trigger_isr_categories()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  PERFORM public.isr_notify(COALESCE(NEW.tenant_id, OLD.tenant_id), 'categories');
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+DROP TRIGGER IF EXISTS isr_categories ON public.categories;
+CREATE TRIGGER isr_categories
+AFTER INSERT OR UPDATE OR DELETE ON public.categories
+FOR EACH ROW EXECUTE FUNCTION public.trigger_isr_categories();
+
+CREATE OR REPLACE FUNCTION public.trigger_isr_coupons()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+BEGIN
+  PERFORM public.isr_notify(COALESCE(NEW.tenant_id, OLD.tenant_id), 'coupons');
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+DROP TRIGGER IF EXISTS isr_coupons ON public.coupons;
+CREATE TRIGGER isr_coupons
+AFTER INSERT OR UPDATE OR DELETE ON public.coupons
+FOR EACH ROW EXECUTE FUNCTION public.trigger_isr_coupons();
 `
 
 // Seed: tenant inicial + usuario admin
@@ -391,17 +515,19 @@ DECLARE
   v_user_id   uuid;
 BEGIN
   -- 1. Crear tenant si no existe
-  INSERT INTO public.tenants (name, slug, plan, status)
-  VALUES ('${businessName}', '${tenantSlug}', '${plan}', 'active')
-  ON CONFLICT (slug) DO NOTHING;
+  INSERT INTO public.tenants (name, slug, plan, status, url, revalidation_secret)
+  VALUES ('${sqlString(businessName)}', '${sqlString(tenantSlug)}', '${sqlString(plan)}', 'active', NULLIF('${sqlString(siteUrl)}', ''), '${sqlString(revalidationSecret)}')
+  ON CONFLICT (slug) DO UPDATE SET
+    url = COALESCE(EXCLUDED.url, public.tenants.url),
+    revalidation_secret = COALESCE(public.tenants.revalidation_secret, EXCLUDED.revalidation_secret);
 
-  SELECT id INTO v_tenant_id FROM public.tenants WHERE slug = '${tenantSlug}';
+  SELECT id INTO v_tenant_id FROM public.tenants WHERE slug = '${sqlString(tenantSlug)}';
 
   -- 2. Buscar usuario admin en auth.users por email
-  SELECT id INTO v_user_id FROM auth.users WHERE email = '${adminEmail}' LIMIT 1;
+  SELECT id INTO v_user_id FROM auth.users WHERE email = '${sqlString(adminEmail)}' LIMIT 1;
 
   IF v_user_id IS NULL THEN
-    RAISE NOTICE 'Usuario % no encontrado en auth.users. Crealo en Supabase Auth primero.', '${adminEmail}';
+    RAISE NOTICE 'Usuario % no encontrado en auth.users. Crealo en Supabase Auth primero.', '${sqlString(adminEmail)}';
     RETURN;
   END IF;
 
@@ -420,11 +546,10 @@ BEGIN
   RAISE NOTICE 'Seed OK — tenant_id: %, user_id: %', v_tenant_id, v_user_id;
 END $$;
 
--- Configuración de plataforma SitioHoy (Correo Argentino cuenta compartida)
--- Cambiar las credenciales aquí o actualizarlas directamente en la tabla platform_config de Supabase.
-INSERT INTO public.platform_config (correo_argentino_user, correo_argentino_password)
-VALUES ('DArrietaAPI', 'Mostaza70+')
-ON CONFLICT DO NOTHING;
+-- Correo Argentino:
+-- Credenciales de plataforma: cargar correo_argentino_user/password en public.platform_config con service role.
+-- Customer ID del negocio: cargar tenants.correo_argentino_customer_id desde el panel admin.
+-- Datos origin_* obligatorios en public.tenants para cotizar envíos.
 `
 
 const output = path.join(root, 'supabase', 'migrations', '001_initial_schema.sql')

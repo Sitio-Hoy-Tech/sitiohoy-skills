@@ -12,6 +12,10 @@ npm install resend
 
 Credencial: `tenants.resend_api_key` (no en `.env`).
 
+El remitente (`from`) de todos los emails transaccionales debe usar el dominio
+verificado de SitioHoy en Resend: `contacto@sitiohoy.com.ar`. No usar el dominio
+del cliente como remitente salvo que SPF, DKIM y DMARC estén verificados para ese dominio.
+
 ## Cliente base
 
 ```typescript
@@ -26,7 +30,7 @@ export const getResendClient = async () => {
   if (!config.resend_api_key) return null
   return {
     resend: new Resend(config.resend_api_key),
-    from: `noreply@${new URL(config.url ?? 'https://sitiohoy.com').hostname}`,
+    from: `${config.name} <contacto@sitiohoy.com.ar>`,
   }
 }
 ```
@@ -184,4 +188,6 @@ Siempre incluir texto de preheader invisible (aparece en la preview del cliente 
 - [ ] Email de confirmación llega al comprar en modo TEST
 - [ ] El email tiene nombre, número de pedido y total correcto
 - [ ] No cae en spam (SPF/DKIM configurados en el dominio)
+- [ ] El dominio `sitiohoy.com.ar` tiene SPF, DKIM y DMARC verificados en Resend
+- [ ] El `from` usa `contacto@sitiohoy.com.ar`, no un dominio del cliente sin verificar
 - [ ] Si `resend_api_key` está vacío, el flujo no lanza error (silently skips)

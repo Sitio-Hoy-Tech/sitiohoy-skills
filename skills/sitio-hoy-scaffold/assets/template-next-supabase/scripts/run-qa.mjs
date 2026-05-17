@@ -1,7 +1,7 @@
 /**
  * run-qa.mjs
  * Ejecuta el pipeline de QA de SitioHoy en orden:
- *   lint → build → sitiohoy:validate → test:e2e → lighthouse
+ *   preflight → lint → build → sitiohoy:validate → sitiohoy:e2e → lighthouse → qa-report
  *
  * Uso: node scripts/run-qa.mjs
  */
@@ -26,11 +26,16 @@ function run(label, command) {
   console.log(`✓ ${label}`)
 }
 
-// Orden de ejecución: fallar rápido en lint/build antes de tests más lentos
+// Orden de ejecución: bloquear temprano si falta contexto crítico.
+if (existsSync('scripts/preflight.mjs')) run('sitiohoy:preflight', ['node', 'scripts/preflight.mjs'])
 if (scripts.lint)       run('lint',                  ['npm', 'run', 'lint'])
 if (scripts.build)      run('build',                 ['npm', 'run', 'build'])
                         run('sitiohoy:validate',     ['node', 'scripts/validate-sitiohoy.mjs'])
-if (scripts['test:e2e']) run('e2e',                  ['npm', 'run', 'test:e2e'])
+if (existsSync('scripts/secret-scan.mjs')) run('sitiohoy:secret-scan', ['node', 'scripts/secret-scan.mjs'])
+if (existsSync('scripts/visual-audit.mjs')) run('sitiohoy:visual-audit', ['node', 'scripts/visual-audit.mjs'])
+if (scripts['sitiohoy:e2e']) run('sitiohoy:e2e',      ['npm', 'run', 'sitiohoy:e2e'])
+else if (scripts['test:e2e']) run('e2e',              ['npm', 'run', 'test:e2e'])
 if (scripts.lighthouse)  run('lighthouse',            ['npm', 'run', 'lighthouse'])
+if (scripts['sitiohoy:qa-report']) run('sitiohoy:qa-report', ['npm', 'run', 'sitiohoy:qa-report'])
 
 console.log('\n✅ QA pipeline completo\n')

@@ -6,8 +6,8 @@ tipo: integración — solo Plan Empresa (Módulo 4, si correoArgentino activo e
 
 # Integración Correo Argentino (MiCorreo API)
 
-> Cuenta compartida SitioHoy — sin costo extra para el cliente.
-> Las credenciales viven en `platform_config` en Supabase, no en `.env`.
+> Las credenciales de acceso MiCorreo de la plataforma viven en `platform_config`, no en `.env` ni en `tenants`.
+> El `customer_id` específico de cada negocio vive en `tenants.correo_argentino_customer_id` y se carga desde el panel admin.
 
 ## ⚠️ Limitación crítica — leer antes de implementar
 
@@ -34,7 +34,28 @@ CA_API_URL=https://apitest.correoargentino.com.ar/micorreo/v1   # testing
 # CA_API_URL=https://api.correoargentino.com.ar/micorreo/v1     # producción
 ```
 
-Las credenciales (user, password) NO van en `.env` — se leen de `platform_config` en Supabase.
+Las credenciales (user, password) NO van en `.env` ni en `tenants` — se leen de `platform_config` en Supabase.
+Para productos físicos, las cotizaciones deben usar `products.weight_grams`,
+`length_cm`, `width_cm` y `height_cm`. Si se usan defaults estimados, registrarlo
+en `proyecto-tracking.json`.
+
+`tenants.origin_postal_code` es obligatorio para cotizar. Sin ese campo, MiCorreo responde:
+`El codigo Postal del emisor debe tener valor`.
+
+## Schema requerido — `platform_config`
+
+```sql
+CREATE TABLE public.platform_config (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  correo_argentino_user text,
+  correo_argentino_password text,
+  correo_argentino_customer_id text,
+  correo_argentino_token text,
+  correo_argentino_token_expires_at timestamptz,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+```
 
 ---
 
@@ -48,7 +69,7 @@ Las credenciales (user, password) NO van en `.env` — se leen de `platform_conf
 | `402 La provincia es invalida` | Código de provincia incorrecto | Usar los códigos de una sola letra de la tabla abajo |
 | `402 El alto/ancho/largo debe estar entre 0 y 255` | Dimensiones en centímetros fuera de rango | Máximo 150cm para cotización, 255cm para importación |
 | `402 La orden ya fue importada con anterioridad` | `extOrderId` duplicado | Usar `orderId` único por orden |
-| `402 El codigo Postal del emisor debe tener valor` | Falta `origin_postal_code` en `platform_config` | Completar datos de origen en Supabase |
+| `402 El codigo Postal del emisor debe tener valor` | Falta `origin_postal_code` en `tenants` | Completar datos de origen en Supabase |
 
 ---
 
@@ -103,39 +124,65 @@ export const toCAProvinceCode = (province: string): string =>
 
 ```typescript
 import { createServiceClient } from '@/lib/supabase/server'
+import { env } from '@/lib/config/env'
 
 const CA_API = process.env.CA_API_URL ?? 'https://api.correoargentino.com.ar/micorreo/v1'
 
 // ─── Token management ────────────────────────────────────────────────────────
 
-async function getPlatformConfig() {
+async function getCorreoArgentinoConfig() {
   const supabase = createServiceClient()
-  const { data, error } = await supabase
-    .from('platform_config')
-    .select('*')
+
+  const { data: tenant, error: tenantError } = await supabase
+    .from('tenants')
+    .select(`
+      id,
+      correo_argentino_customer_id,
+      origin_postal_code
+    `)
+    .eq('id', env.NEXT_PUBLIC_TENANT_ID)
     .single()
-  if (error || !data) throw new Error('platform_config no encontrada. Ejecutar seed de Supabase.')
-  return data
+
+  if (tenantError || !tenant) throw new Error('Tenant no encontrado para Correo Argentino.')
+
+  const { data: platform, error: platformError } = await supabase
+    .from('platform_config')
+    .select(`
+      id,
+      correo_argentino_user,
+      correo_argentino_password,
+      correo_argentino_customer_id,
+      correo_argentino_token,
+      correo_argentino_token_expires_at
+    `)
+    .limit(1)
+    .single()
+
+  if (platformError || !platform) {
+    throw new Error('Credenciales de Correo Argentino no configuradas en platform_config.')
+  }
+
+  return { tenant, platform }
 }
 
 export async function getCAToken(): Promise<string> {
-  const config = await getPlatformConfig()
+  const { platform } = await getCorreoArgentinoConfig()
 
   // Devolver token cacheado si todavía es válido (con 5 min de margen)
-  if (config.correo_argentino_token && config.correo_argentino_token_expires_at) {
-    const expiresAt = new Date(config.correo_argentino_token_expires_at)
+  if (platform.correo_argentino_token && platform.correo_argentino_token_expires_at) {
+    const expiresAt = new Date(platform.correo_argentino_token_expires_at)
     if (expiresAt > new Date(Date.now() + 5 * 60 * 1000)) {
-      return config.correo_argentino_token
+      return platform.correo_argentino_token
     }
   }
 
-  if (!config.correo_argentino_user || !config.correo_argentino_password) {
+  if (!platform.correo_argentino_user || !platform.correo_argentino_password) {
     throw new Error('Credenciales de Correo Argentino no configuradas en platform_config.')
   }
 
   // Refrescar token via Basic Auth
   const credentials = Buffer.from(
-    `${config.correo_argentino_user}:${config.correo_argentino_password}`
+    `${platform.correo_argentino_user}:${platform.correo_argentino_password}`
   ).toString('base64')
 
   const res = await fetch(`${CA_API}/token`, {
@@ -149,6 +196,10 @@ export async function getCAToken(): Promise<string> {
   }
 
   const { token, expires } = await res.json() as { token: string; expires: string }
+  const expiresDate = new Date(expires)
+  const expiresAt = isNaN(expiresDate.getTime())
+    ? new Date(Date.now() + 60 * 60 * 1000)
+    : expiresDate
 
   // Guardar en DB
   const supabase = createServiceClient()
@@ -156,9 +207,9 @@ export async function getCAToken(): Promise<string> {
     .from('platform_config')
     .update({
       correo_argentino_token: token,
-      correo_argentino_token_expires_at: new Date(expires).toISOString(),
+      correo_argentino_token_expires_at: expiresAt.toISOString(),
     })
-    .eq('id', config.id)
+    .eq('id', platform.id)
 
   return token
 }
@@ -166,10 +217,10 @@ export async function getCAToken(): Promise<string> {
 // ─── Customer ID ─────────────────────────────────────────────────────────────
 
 export async function getCACustomerId(): Promise<string> {
-  const config = await getPlatformConfig()
+  const { tenant, platform } = await getCorreoArgentinoConfig()
 
-  if (config.correo_argentino_customer_id) {
-    return config.correo_argentino_customer_id
+  if (tenant.correo_argentino_customer_id) {
+    return tenant.correo_argentino_customer_id
   }
 
   // Obtener customerId via /users/validate
@@ -181,8 +232,8 @@ export async function getCACustomerId(): Promise<string> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      email: config.correo_argentino_user,
-      password: config.correo_argentino_password,
+      email: platform.correo_argentino_user,
+      password: platform.correo_argentino_password,
     }),
   })
 
@@ -196,9 +247,9 @@ export async function getCACustomerId(): Promise<string> {
   // Guardar en DB
   const supabase = createServiceClient()
   await supabase
-    .from('platform_config')
+    .from('tenants')
     .update({ correo_argentino_customer_id: customerId })
-    .eq('id', config.id)
+    .eq('id', tenant.id)
 
   return customerId
 }
@@ -387,15 +438,6 @@ import { getShippingRates } from '@/lib/correo-argentino/client'
 import { toCAProvinceCode } from '@/lib/correo-argentino/provinces'
 import { getTenantConfig } from '@/lib/config/tenant'
 
-const SHIPPING_FALLBACK = {
-  deliveredType: 'D' as const,
-  productType: 'CP',
-  productName: 'Coordinar envío',
-  price: 0,
-  deliveryTimeMin: '0',
-  deliveryTimeMax: '0',
-}
-
 export async function quoteCorrShipping(params: {
   postalCodeDestination: string
   weight: number    // gramos totales del pedido
@@ -405,6 +447,10 @@ export async function quoteCorrShipping(params: {
 }) {
   try {
     const tenant = await getTenantConfig()
+    if (!tenant.origin_postal_code) {
+      return { ok: false, error: 'Falta configurar el código postal de origen del negocio.' }
+    }
+
     const rates = await getShippingRates({
       postalCodeOrigin: tenant.origin_postal_code,
       postalCodeDestination: params.postalCodeDestination,
@@ -415,13 +461,20 @@ export async function quoteCorrShipping(params: {
         length: params.length,
       },
     })
+    if (!rates.length) {
+      return { ok: false, error: 'No hay opciones de envío para ese código postal.' }
+    }
+
     return { ok: true, rates }
   } catch (err) {
     console.error('[CA shipping quote error]', err)
-    return { ok: false, rates: [SHIPPING_FALLBACK] }
+    return { ok: false, error: 'No se pudo cotizar el envío. Revisá el código postal.' }
   }
 }
 ```
+
+El checkout nunca debe usar una tarifa flat como fallback si MiCorreo no devuelve opciones.
+El formulario debe deshabilitar el submit mientras `selectedRate === null`.
 
 ---
 
@@ -472,7 +525,7 @@ if (config.integrations?.correoArgentino && order.shipping_carrier === 'correo-a
 Una vez que SitioHoy importa el envío automáticamente al confirmar el pago, el comerciante debe:
 
 1. Entrar a [correoargentino.com.ar/MiCorreo](https://www.correoargentino.com.ar/MiCorreo)
-2. Iniciar sesión con las credenciales de la cuenta SitioHoy
+2. Iniciar sesión con la cuenta MiCorreo operativa definida por la plataforma
 3. Ir a "Mis envíos" → encontrar el envío por número de orden
 4. Pagar el envío (si la cuenta no tiene saldo o cuenta corriente)
 5. Descargar e imprimir la etiqueta
