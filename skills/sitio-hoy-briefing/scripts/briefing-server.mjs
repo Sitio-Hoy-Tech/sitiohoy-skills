@@ -516,14 +516,33 @@ async function handleSubmit(req, res) {
   await writeFile(briefPath, buildBrief(intake, newIntegrations))
   log(clr(c.green, `  ✓ brief.md escrito`))
 
-  // Generate DESIGN.md for Stitch
+  // Generate DESIGN.md for Stitch using the standalone generator
   const designDir = path.join(CWD, '.sitiohoy', 'design')
   await mkdir(designDir, { recursive: true })
 
-  // Write the ultra-detailed DESIGN.md
-  const designMdPath = path.join(designDir, 'DESIGN.md')
-  await writeFile(designMdPath, buildDesignMd(intake, newIntegrations))
-  log(clr(c.green, `  ✓ .sitiohoy/design/DESIGN.md escrito`))
+  // Execute generate-design-md.mjs to create DESIGN.md
+  const designGeneratorPath = path.join(__dirname, 'generate-design-md.mjs')
+  let designMdGenerated = false
+
+  if (fs.existsSync(designGeneratorPath)) {
+    try {
+      const { execSync } = await import('node:child_process')
+      execSync(`node "${designGeneratorPath}"`, { cwd: CWD, stdio: 'pipe' })
+      designMdGenerated = true
+      log(clr(c.green, `  ✓ .sitiohoy/design/DESIGN.md generado via generate-design-md.mjs`))
+    } catch (err) {
+      log(clr(c.yellow, `  ⚠ Error generando DESIGN.md via script: ${err.message}`))
+      log(clr(c.yellow, `    Intentando generación inline...`))
+    }
+  }
+
+  // Fallback: generate inline if script failed or doesn't exist
+  if (!designMdGenerated) {
+    const designMdPath = path.join(designDir, 'DESIGN.md')
+    await writeFile(designMdPath, buildDesignMd(intake, newIntegrations))
+    log(clr(c.green, `  ✓ .sitiohoy/design/DESIGN.md escrito (inline)`))
+  }
+
   log(clr(c.cyan, `    → Este archivo se debe enviar manualmente a Stitch`))
 
   // Write copy guide
@@ -751,28 +770,13 @@ function buildBrief(intake, integrations) {
   return `${lines.join('\n')}\n`
 }
 
+// Fallback inline generator if generate-design-md.mjs fails
+// NOTE: Use generate-design-md.mjs as the primary generator.
+// This function is a minimal fallback.
 function buildDesignMd(intake, integrations) {
   const business = intake.business ?? {}
-  const audience = intake.audience ?? {}
-  const visual = intake.visualIdentity ?? {}
-  const catalog = intake.catalog ?? {}
-  const pages = intake.pages ?? {}
-  const assets = intake.assets ?? {}
-  const contact = intake.contact ?? {}
-  const technical = intake.technical ?? {}
-  const plan = String(intake.plan ?? 'esencial').toLowerCase()
-  const hasCheckout = plan === 'emprendimiento' || plan === 'empresa'
-
-  const tone = String(audience.tone ?? 'profesional').toLowerCase()
-  const style = String(visual.style ?? 'moderno').toLowerCase()
-
-  const toneDescriptions = {
-    cercano: 'Cercano, amigable, como hablar con un amigo. Tuteo. Frases cortas y directas.',
-    profesional: 'Profesional, confiable, directo. Neutro o ustedeo. Sin jerga excesiva.',
-    juvenil: 'Joven, dinámico, divertido. Tuteo. Emojis moderados. Energético.',
-    exclusivo: 'Elegante, sobrio, refinado. Ustedeo. Lenguaje cuidado y selecto.',
-    informal: 'Informal, relajado, sin pretensiones. Tuteo. Como una charla de café.',
-  }
+  return `# DESIGN.md — ${business.name || 'Proyecto'}\n\n> ERROR: El generador principal (generate-design-md.mjs) falló.\n> Por favor ejecutá: node scripts/generate-design-md.mjs\n`
+}
 
   const toneDesc = toneDescriptions[tone] || toneDescriptions.profesional
 
