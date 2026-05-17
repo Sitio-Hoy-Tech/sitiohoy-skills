@@ -525,14 +525,14 @@ await write(path.join(outDesign, 'anti-slop-checklist.md'), `
 // Write stitch-instructions.md
 const stitchInstructions = `# Instrucciones de Implementación desde Stitch
 
-## Flujo de trabajo
-1. Abrir el diseño con \`mcp__pencil__get_editor_state\`
-2. Capturar layout de cada página con \`mcp__pencil__snapshot_layout\`
-3. Extraer variables de diseño con \`mcp__pencil__get_variables\`
-4. Implementar componente por componente comparando con \`mcp__pencil__get_screenshot\`
+## Flujo de trabajo (Manual)
+1. Abrir Stitch en el navegador con el ID del proyecto guardado en \`.sitiohoy/design/stitch-project-id.txt\`
+2. Revisar el diseño de cada página directamente en Stitch
+3. Extraer variables de diseño visualmente del panel de Stitch
+4. Implementar componente por componente comparando con el diseño en Stitch
 
 ## Mapeo Stitch → Code
-| Stitch Property | CSS/Tailwind Equivalent |
+| Propiedad Stitch | CSS/Tailwind Equivalent |
 |---|---|
 | fill color | bg-[color] / background-color |
 | text color | text-[color] / color |
@@ -544,17 +544,22 @@ const stitchInstructions = `# Instrucciones de Implementación desde Stitch
 
 ## Reglas de Fidelidad
 - Cada componente debe coincidir con el diseño en ±2px
-- Colores exactos — no aproximar
-- Tipografía: mismo font-family, weight y size
-- Espaciado: respetar el sistema de spacing del diseño
-- Si Stitch usa 8px grid, implementar con múltiplos de 8
+- Colores exactos — no aproximar (usar los hex del DESIGN.md)
+- Tipografía: mismo font-family, weight y size (ver DESIGN.md sección 4)
+- Espaciado: respetar el sistema de spacing del diseño (ver DESIGN.md sección 5)
+- Si el diseño usa 8px grid, implementar con múltiplos de 8
 
 ## Verificación
 Después de implementar cada página:
-1. \`mcp__pencil__get_screenshot\` del diseño
-2. Screenshot del sitio en el mismo viewport
-3. Comparar visualmente
+1. Revisar el diseño en Stitch
+2. Screenshot del sitio implementado en el mismo viewport
+3. Comparar visualmente lado a lado
 4. Ajustar hasta match
+
+## Recuerda
+- El DESIGN.md (\`.sitiohoy/design/DESIGN.md\`) contiene todas las especificaciones
+- Stitch es la única fuente de verdad visual
+- No inventar diseño — implementar exactamente lo que Stitch generó
 `
 await writeFile(path.join(outDesign, 'stitch-instructions.md'), stitchInstructions)
 
@@ -568,10 +573,11 @@ Stitch design DEBE estar listo antes de Módulo 1.
 ## Secuencia
 
 ### Pre-implementación
-1. ✅ Briefing completado (intake.json, config, brief.md, design-brief-stitch.md)
+1. ✅ Briefing completado (intake.json, config, brief.md, DESIGN.md)
 2. ✅ Context packs generados (.sitiohoy/context/, .sitiohoy/design/)
-3. ✅ Diseño creado en Stitch y aprobado
-4. ✅ Tokens extraídos de Stitch → tokens.css
+3. ✅ DESIGN.md enviado a Stitch y diseño generado
+4. ✅ ID del proyecto de Stitch guardado en `.sitiohoy/design/stitch-project-id.txt`
+5. ✅ Tokens extraídos del diseño de Stitch → tokens.css
 
 ### Módulo 0 — Scaffold & Database
 - Next.js base + Supabase schema + QA scripts

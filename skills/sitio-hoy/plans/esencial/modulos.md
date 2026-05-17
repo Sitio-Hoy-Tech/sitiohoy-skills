@@ -34,15 +34,19 @@ Pasos:
 5. Aplicar schema completo + RLS + bucket `public_assets`.
    - El schema completo se crea aunque Esencial no use checkout.
    - Las features se apagan por configuración, no borrando tablas.
-6. Generar design system con AIDesigner MCP o manualmente según onboarding.
-7. Crear/ajustar `styles/tokens.css` con tokens reales del negocio.
-8. Crear `DESIGN.md` con rationale visual.
+6. Enviar `.sitiohoy/design/DESIGN.md` manualmente a Stitch para generar el diseño completo.
+7. Guardar ID del proyecto de Stitch en `.sitiohoy/design/stitch-project-id.txt`.
+8. Exportar assets desde Stitch a `_assets-cliente/stitch/`.
+9. Crear/ajustar `styles/tokens.css` con tokens reales extraídos del diseño de Stitch.
 9. Crear `.env.local` desde `.env.example`.
 10. Agregar `proyecto-tracking.json` a `.gitignore`.
 
 Verificación ✅:
 - [ ] `sitiohoy.config.json` creado con plan Esencial
-- [ ] `styles/tokens.css` existe y refleja el brief
+- [ ] `.sitiohoy/design/DESIGN.md` generado y enviado a Stitch
+- [ ] Diseño de Stitch generado y revisado
+- [ ] ID del proyecto de Stitch guardado
+- [ ] `styles/tokens.css` existe y refleja el diseño de Stitch
 - [ ] `supabase/migrations/001_initial_schema.sql` generado
 - [ ] Schema completo aplicado o listo para ejecutar manualmente
 - [ ] `.env.example` existe y `.env.local` no se commitea

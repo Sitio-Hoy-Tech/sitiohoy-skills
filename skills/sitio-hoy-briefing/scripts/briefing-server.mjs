@@ -516,12 +516,15 @@ async function handleSubmit(req, res) {
   await writeFile(briefPath, buildBrief(intake, newIntegrations))
   log(clr(c.green, `  ✓ brief.md escrito`))
 
-  // Generate Stitch design brief
+  // Generate DESIGN.md for Stitch
   const designDir = path.join(CWD, '.sitiohoy', 'design')
   await mkdir(designDir, { recursive: true })
-  const stitchBriefPath = path.join(designDir, 'design-brief-stitch.md')
-  await writeFile(stitchBriefPath, buildStitchBrief(intake, newIntegrations))
-  log(clr(c.green, `  ✓ .sitiohoy/design/design-brief-stitch.md escrito`))
+
+  // Write the ultra-detailed DESIGN.md
+  const designMdPath = path.join(designDir, 'DESIGN.md')
+  await writeFile(designMdPath, buildDesignMd(intake, newIntegrations))
+  log(clr(c.green, `  ✓ .sitiohoy/design/DESIGN.md escrito`))
+  log(clr(c.cyan, `    → Este archivo se debe enviar manualmente a Stitch`))
 
   // Write copy guide
   const copyGuidePath = path.join(sitiohoyDir, 'copy-guide.md')
@@ -535,7 +538,8 @@ async function handleSubmit(req, res) {
   if (tenantLookupPath) log(clr(c.gray, '  .sitiohoy/existing-tenant-check.json'))
   log(clr(c.gray, '  sitiohoy.config.json'))
   log(clr(c.gray, '  brief.md'))
-  log(clr(c.gray, '  .sitiohoy/design/design-brief-stitch.md'))
+  log(clr(c.gray, '  .sitiohoy/design/DESIGN.md'))
+  log(clr(c.cyan, '    → Enviar DESIGN.md manualmente a Stitch para generar el diseño'))
   log(clr(c.gray, '  .sitiohoy/copy-guide.md'))
   savedFiles.forEach(f => log(clr(c.gray, `  ${f}`)))
   log('')
@@ -747,157 +751,346 @@ function buildBrief(intake, integrations) {
   return `${lines.join('\n')}\n`
 }
 
-function buildStitchBrief(intake, integrations) {
+function buildDesignMd(intake, integrations) {
   const business = intake.business ?? {}
   const audience = intake.audience ?? {}
   const visual = intake.visualIdentity ?? {}
   const catalog = intake.catalog ?? {}
   const pages = intake.pages ?? {}
   const assets = intake.assets ?? {}
+  const technical = intake.technical ?? {}
   const plan = String(intake.plan ?? 'esencial').toLowerCase()
   const hasCheckout = plan === 'emprendimiento' || plan === 'empresa'
-  const pageList = Object.entries(pages).filter(([, enabled]) => enabled).map(([name]) => name)
 
   const tone = String(audience.tone ?? 'profesional').toLowerCase()
   const style = String(visual.style ?? 'moderno').toLowerCase()
 
-  // Typography suggestions based on tone
   const typoMap = {
-    cercano: { display: 'Nunito / Quicksand (rounded, friendly)', body: 'Inter / Source Sans 3 (legible, warm)' },
-    profesional: { display: 'Outfit / Manrope (geometric, clean)', body: 'Inter / IBM Plex Sans (neutral, precise)' },
-    juvenil: { display: 'Space Grotesk / Sora (bold, playful)', body: 'DM Sans / Rubik (modern, energetic)' },
-    exclusivo: { display: 'Playfair Display / Cormorant (serif, elegant)', body: 'Lora / Source Serif 4 (refined, readable)' },
-    informal: { display: 'Poppins / Comfortaa (rounded, casual)', body: 'Nunito Sans / Karla (friendly, legible)' },
+    cercano: {
+      display: { family: 'Nunito', fallback: 'Quicksand', weight: 700, style: 'rounded, friendly' },
+      body: { family: 'Inter', fallback: 'Source Sans 3', weight: 400, style: 'legible, warm' },
+    },
+    profesional: {
+      display: { family: 'Outfit', fallback: 'Manrope', weight: 700, style: 'geometric, clean' },
+      body: { family: 'Inter', fallback: 'IBM Plex Sans', weight: 400, style: 'neutral, precise' },
+    },
+    juvenil: {
+      display: { family: 'Space Grotesk', fallback: 'Sora', weight: 700, style: 'bold, playful' },
+      body: { family: 'DM Sans', fallback: 'Rubik', weight: 400, style: 'modern, energetic' },
+    },
+    exclusivo: {
+      display: { family: 'Playfair Display', fallback: 'Cormorant', weight: 700, style: 'serif, elegant' },
+      body: { family: 'Lora', fallback: 'Source Serif 4', weight: 400, style: 'refined, readable' },
+    },
+    informal: {
+      display: { family: 'Poppins', fallback: 'Comfortaa', weight: 700, style: 'rounded, casual' },
+      body: { family: 'Nunito Sans', fallback: 'Karla', weight: 400, style: 'friendly, legible' },
+    },
   }
+
   const typo = typoMap[tone] || typoMap.profesional
+  const isDark = style.includes('dark') || style.includes('oscuro')
 
   const primaryColor = visual.colors?.primary || '#16a05d'
   const secondaryColor = visual.colors?.secondary || '#1a1a2e'
   const accentColor = visual.colors?.accent || '#e8b43f'
 
-  const primaryDevice = audience.primaryDevice ?? 'mobile'
-  const primaryGoal = business.primaryGoal ?? 'vender'
+  const bgColor = isDark ? '#0a0a0a' : '#ffffff'
+  const surfaceColor = isDark ? '#141414' : '#fafafa'
+  const textColor = isDark ? '#f5f5f5' : '#1a1a1a'
+  const textMutedColor = isDark ? '#a0a0a0' : '#6b7280'
 
   const animLevel = intake.animations ?? 'subtle'
-  const animSuggestions = {
-    none: 'Sin animaciones. Transiciones CSS mínimas (opacity) para estados.',
-    subtle: 'Fade-in al scroll, hover suaves en cards, transiciones 200-300ms.',
-    full: 'Entrada escalonada de elementos, parallax sutil en hero, micro-interacciones en botones y cart.',
+
+  // Plan page definitions
+  const planPages = {
+    esencial: {
+      required: ['Home', 'Catálogo', 'Producto', 'Sobre Nosotros', 'FAQ', 'Contacto', 'Términos y Privacidad', '404', 'Error'],
+      checkout: false,
+    },
+    emprendimiento: {
+      required: ['Home', 'Catálogo', 'Producto', 'Carrito', 'Checkout (Datos)', 'Checkout (Envío)', 'Checkout (Pago)', 'Checkout (Confirmación)', 'Seguimiento de Pedido', 'Sobre Nosotros', 'FAQ', 'Contacto', 'Términos y Privacidad', '404', 'Error'],
+      checkout: true,
+    },
+    empresa: {
+      required: ['Home', 'Catálogo', 'Producto', 'Carrito', 'Checkout (Datos)', 'Checkout (Envío)', 'Checkout (Pago)', 'Checkout (Confirmación)', 'Seguimiento de Pedido', 'Sobre Nosotros', 'FAQ', 'Contacto', 'Términos y Privacidad', 'Blog (opcional)', '404', 'Error'],
+      checkout: true,
+    },
   }
 
-  // Build home sections based on goal
-  const homeSections = [
-    `1. Hero — layout: ${visual.heroLayout || 'fullwidth'}, tipo ${primaryGoal === 'confianza' ? '(imagen fullwidth + testimonio)' : primaryGoal === 'leads' ? '(split: texto + formulario)' : '(imagen fullwidth / split con CTA)'}, CTA principal`,
-    '2. Categorías destacadas — grid 3-4 items',
-    '3. Productos destacados — carousel o grid',
-    '4. Trust signals — envíos, pagos, garantía',
-    pageList.includes('testimonios') ? '5. Testimonios' : null,
-    '6. CTA final — newsletter o WhatsApp',
-  ].filter(Boolean)
+  const pageList = planPages[plan]?.required || planPages.esencial.required
 
-  const lines = [
-    `# Design Brief — ${business.name ?? 'Proyecto'}`,
-    '',
-    '## Identidad de Marca',
-    `- Nombre: ${business.name ?? 'sin definir'}`,
-    `- Rubro: ${business.industry ?? 'sin definir'}`,
-    `- Tono: ${tone}`,
-    `- Mood/sensación: ${visual.desiredMood ?? audience.desiredFeeling ?? 'sin definir'}`,
-    `- Estilo visual: ${style}`,
-    '',
-    '## Paleta de Colores',
-    `- Primario: ${primaryColor}`,
-    `- Secundario: ${secondaryColor}`,
-    `- Acento: ${accentColor}`,
-    `- Fondo: ${style.includes('oscuro') || style.includes('dark') ? '#0f0f0f (dark mode)' : '#fafafa (light, clean)'}`,
-    `- Texto: ${style.includes('oscuro') || style.includes('dark') ? '#f5f5f5' : '#1a1a1a'}`,
-    '',
-    '## Tipografía',
-    `- Display: ${typo.display}`,
-    `- Body: ${typo.body}`,
-    '- Tamaños: h1=48/56px, h2=36/40px, h3=24/28px, body=16px, small=14px',
-    '',
-    '## Layout & Estructura',
-    '### Páginas requeridas (basado en plan)',
-    ...(pageList.includes('home') || true ? ['- Home (hero, features, testimonios, CTA)'] : []),
-    ...(pageList.includes('catalogo') || hasCheckout ? ['- Catálogo (grid, filtros, cards)'] : []),
-    ...(pageList.includes('producto') || hasCheckout ? ['- Producto (galería, info, variantes, add to cart)'] : []),
-    ...(hasCheckout ? ['- Checkout (carrito, datos, envío, pago, confirmación)'] : []),
-    ...(pageList.includes('about') ? ['- About'] : []),
-    ...(pageList.includes('faq') ? ['- FAQ'] : []),
-    ...(pageList.includes('contacto') ? ['- Contacto'] : []),
-    ...(pageList.includes('legal') || pageList.includes('terminos') ? ['- Legal (términos, privacidad)'] : []),
-    '',
-    '### Componentes clave',
-    '- Header (logo, nav, cart icon, mobile menu)',
-    '- Footer (contacto, redes, links legales)',
-    `- Hero section (tipo basado en objetivo: ${primaryGoal})`,
-    `- Layout del hero: ${visual.heroLayout || 'fullwidth'}`,
-    `- Densidad: ${visual.density || 'spacious'}`,
-    '- Product card (imagen, nombre, precio, CTA)',
-    ...(hasCheckout ? ['- Cart sidebar/drawer'] : []),
-    '',
-    '## Responsive Breakpoints',
-    `- Mobile: 375px ${primaryDevice === 'mobile' ? '(PRIORIDAD)' : ''}`,
-    `- Tablet: 768px`,
-    `- Desktop: 1280px ${primaryDevice === 'desktop' ? '(PRIORIDAD)' : ''}`,
-    '- Wide: 1920px',
-    '',
-    '## Assets Disponibles',
-    `- Logo: ${visual.logo?.available ? `sí (${visual.logo.format || 'formato no especificado'})` : 'no'}`,
-    `- Hero: ${assets.folderReady ? 'sí' : 'no (usar placeholder)'}`,
-    `- Productos: ${assets.missing?.includes('productos') ? 'no (usar Unsplash)' : 'sí'} ${visual.photoQuality ? `(calidad: ${visual.photoQuality})` : ''}`,
-    `- Marca: ${visual.logo?.available ? 'sí' : 'no'}`,
-    '',
-    '## Animaciones',
-    `- Nivel: ${animLevel}`,
-    `- Sugerencias: ${animSuggestions[animLevel] || animSuggestions.subtle}`,
-    '',
-    '## Referencias Visuales',
-    `- URLs del cliente: ${Array.isArray(business.visualReferences) && business.visualReferences.length ? business.visualReferences.join(', ') : 'ninguna'}`,
-    `- Estilo seleccionado: ${style}`,
-    '',
-    '## Plan & Escala',
-    `- Plan: ${plan}`,
-    `- Productos: ${catalog.initialCount ?? 0}`,
-    `- Categorías: ${Array.isArray(catalog.categories) && catalog.categories.length ? catalog.categories.join(', ') : 'sin definir'}`,
-    `- Integraciones visuales: ${[integrations.mercadopago ? 'MercadoPago badge' : null, integrations.correoArgentino || integrations.envia || integrations.fixedShipping ? 'shipping info' : null, integrations.whatsapp ? 'WhatsApp button' : null].filter(Boolean).join(', ') || 'ninguna'}`,
-    '',
-    '## Secciones por Página (detallado)',
-    '',
-    '### Home',
-    ...homeSections,
-    '',
-    '### Catálogo',
-    '1. Filtros laterales o top bar',
-    '2. Grid de productos (2-4 cols responsive)',
-    '3. Paginación o infinite scroll',
-    '',
-    '### Producto',
-    '1. Galería (thumbnails + zoom)',
-    '2. Info (nombre, precio, descripción)',
-    ...(catalog.hasVariants ? ['3. Variantes (selector)'] : []),
-    `${catalog.hasVariants ? '4' : '3'}. Add to cart`,
-    `${catalog.hasVariants ? '5' : '4'}. Productos relacionados`,
-    '',
-    ...(hasCheckout ? [
-      '### Checkout',
-      '1. Resumen carrito',
-      '2. Datos personales',
-      ...(integrations.correoArgentino || integrations.envia || integrations.fixedShipping ? ['3. Envío (selección de método)'] : []),
-      `${integrations.correoArgentino || integrations.envia || integrations.fixedShipping ? '4' : '3'}. Pago (MercadoPago Brick)`,
-      `${integrations.correoArgentino || integrations.envia || integrations.fixedShipping ? '5' : '4'}. Confirmación`,
-      '',
-    ] : []),
-    '## Notas para Stitch',
-    `- Dispositivo principal del público: ${primaryDevice}`,
-    `- Objetivo principal del sitio: ${primaryGoal}`,
-    `- Diferenciador del negocio: ${business.differentiator ?? 'sin definir'}`,
-    `- Público objetivo: ${audience.profile ?? 'sin definir'}`,
-    '',
-  ]
+  const lines = []
 
-  return `${lines.join('\n')}\n`
+  // Header
+  lines.push(`# DESIGN.md — ${business.name || 'Proyecto'}`, '')
+  lines.push(`> Documento de diseño completo generado automáticamente por SitioHoy Briefing`)
+  lines.push(`> Fecha: ${new Date().toISOString().split('T')[0]}`)
+  lines.push(`> Plan: ${plan.toUpperCase()}`)
+  lines.push(`> Versión: 1.0`, '')
+
+  // 1. Project Info
+  lines.push('## 1. Información del Proyecto', '')
+  lines.push(`| Campo | Valor |`)
+  lines.push(`|---|---|`)
+  lines.push(`| **Nombre** | ${business.name || 'Sin definir'} |`)
+  lines.push(`| **Slug** | ${business.slug || 'Sin definir'} |`)
+  lines.push(`| **Rubro** | ${business.industry || 'Sin definir'} |`)
+  lines.push(`| **Plan** | ${plan.toUpperCase()} |`)
+  lines.push(`| **Descripción** | ${business.description || 'Sin definir'} |`)
+  lines.push(`| **Diferenciador** | ${business.differentiator || 'Sin definir'} |`)
+  lines.push(`| **Objetivo Principal** | ${business.primaryGoal || 'Sin definir'} |`)
+  lines.push(`| **Estilo Visual** | ${visual.style || 'Sin definir'} |`)
+  lines.push(`| **Mood** | ${visual.desiredMood || audience.desiredFeeling || 'Sin definir'} |`)
+  lines.push(`| **Animaciones** | ${animLevel.toUpperCase()} |`)
+  lines.push('')
+
+  // 2. Audience
+  lines.push('## 2. Audiencia Objetivo', '')
+  lines.push(`| Campo | Valor |`)
+  lines.push(`|---|---|`)
+  lines.push(`| **Perfil** | ${audience.profile || 'Sin definir'} |`)
+  lines.push(`| **Problema** | ${audience.problem || 'Sin definir'} |`)
+  lines.push(`| **Sensación** | ${audience.desiredFeeling || 'Sin definir'} |`)
+  lines.push(`| **Tono** | ${tone.toUpperCase()} |`)
+  lines.push(`| **Dispositivo** | ${audience.primaryDevice || 'mixed'} |`)
+  lines.push('')
+  lines.push('### Lenguaje y Comunicación')
+  lines.push('')
+  lines.push(`- **Tono:** ${tone}`)
+  lines.push(`- **Tratamiento:** ${tone === 'cercano' || tone === 'juvenil' || tone === 'informal' ? 'Tuteo (vos)' : 'Ustedeo o neutro'}`)
+  lines.push(`- **CTAs:** ${tone === 'juvenil' ? 'Energéticos, imperativos' : tone === 'exclusivo' ? 'Elegantes, invitativos' : 'Claros, accionables'}`)
+  lines.push('')
+
+  // 3. Colors
+  lines.push('## 3. Paleta de Colores', '')
+  lines.push('### Marca')
+  lines.push(`| Rol | Hex | Uso |`)
+  lines.push(`|---|---|---|`)
+  lines.push(`| **Primario** | ${primaryColor} | CTAs, botones, acentos |`)
+  lines.push(`| **Secundario** | ${secondaryColor} | Headers, fondos oscuros |`)
+  lines.push(`| **Acento** | ${accentColor} | Badges, etiquetas |`)
+  lines.push('')
+  lines.push('### Fondos')
+  lines.push(`| Rol | Hex |`)
+  lines.push(`|---|---|`)
+  lines.push(`| **Background** | ${bgColor} |`)
+  lines.push(`| **Surface** | ${surfaceColor} |`)
+  lines.push(`| **Texto** | ${textColor} |`)
+  lines.push(`| **Texto Secundario** | ${textMutedColor} |`)
+  lines.push('')
+
+  // 4. Typography
+  lines.push('## 4. Tipografía', '')
+  lines.push(`| Rol | Fuente | Fallback | Weight |`)
+  lines.push(`|---|---|---|---|`)
+  lines.push(`| **Display** | ${typo.display.family} | ${typo.display.fallback} | ${typo.display.weight} |`)
+  lines.push(`| **Body** | ${typo.body.family} | ${typo.body.fallback} | ${typo.body.weight} |`)
+  lines.push('')
+  lines.push('### Escala')
+  lines.push(`| Elemento | Mobile | Desktop | Line-height |`)
+  lines.push(`|---|---|---|---|`)
+  lines.push(`| H1 | 32px | 56px | 1.1 |`)
+  lines.push(`| H2 | 28px | 40px | 1.2 |`)
+  lines.push(`| H3 | 22px | 28px | 1.3 |`)
+  lines.push(`| Body | 14px | 16px | 1.6 |`)
+  lines.push(`| Small | 12px | 14px | 1.5 |`)
+  lines.push('')
+
+  // 5. Layout
+  lines.push('## 5. Layout y Grid', '')
+  lines.push(`| Breakpoint | Ancho | Uso |`)
+  lines.push(`|---|---|---|`)
+  lines.push(`| Mobile | 375px | Base design |`)
+  lines.push(`| Tablet | 768px | 2 columnas |`)
+  lines.push(`| Desktop | 1280px | Layout completo |`)
+  lines.push(`| Wide | 1920px | Desktop grande |`)
+  lines.push('')
+
+  // 6. Components
+  lines.push('## 6. Componentes Clave', '')
+  lines.push('### Header')
+  lines.push('- Altura: 64px mobile, 72px desktop')
+  lines.push('- Fondo: transparente en hero, blur al scrollear')
+  lines.push('- Logo izquierda, nav centrada, CTA derecha')
+  lines.push('- Mobile: hamburguesa + drawer desde derecha')
+  lines.push('')
+  lines.push('### Footer')
+  lines.push('- 4 columnas desktop, 1 columna mobile')
+  lines.push('- Copyright izquierda, crédito SitioHoy derecha')
+  lines.push('- Logo SitioHoy: 72x24px con link a sitiohoy.com.ar')
+  lines.push('')
+  lines.push('### Product Card')
+  lines.push('- Border-radius: 12px, aspect-ratio 1/1')
+  lines.push('- Hover: scale(1.02) + shadow-md, 250ms')
+  lines.push('- Badge: "Nuevo", "Oferta", "Últimas unidades"')
+  lines.push('')
+
+  if (hasCheckout) {
+    lines.push('### Cart Drawer')
+    lines.push('- Ancho: 100vw mobile, 420px desktop')
+    lines.push('- Overlay oscuro 50%')
+    lines.push('- Items: imagen 80x80 + info + eliminar')
+    lines.push('')
+    lines.push('### Checkout')
+    lines.push('- Max-width: 600px centrado')
+    lines.push('- Steps: Datos → Envío → Pago → Confirmación')
+    lines.push('- Progress bar visible')
+    lines.push('')
+  }
+
+  // 7. Pages
+  lines.push('## 7. Páginas a Diseñar', '')
+  lines.push(`**Total: ${pageList.length} páginas**`)
+  lines.push(`**Plan: ${plan.toUpperCase()}**`)
+  lines.push('')
+  pageList.forEach((page, idx) => {
+    lines.push(`### ${idx + 1}. ${page}`)
+    if (page === 'Home') {
+      lines.push('- Hero: headline + CTA + imagen')
+      lines.push('- Categorías destacadas (grid 3-4)')
+      lines.push('- Productos destacados')
+      lines.push('- Trust signals')
+      lines.push('- Testimonios (si aplica)')
+      lines.push('- CTA final')
+      if (!hasCheckout) lines.push('- WhatsApp banner prominente')
+    } else if (page === 'Catálogo') {
+      lines.push('- Header con título y breadcrumb')
+      lines.push('- Filtros (sidebar desktop, drawer mobile)')
+      lines.push('- Grid productos 2-4 columnas')
+      lines.push('- Paginación o infinite scroll')
+    } else if (page === 'Producto') {
+      lines.push('- Galería: imagen principal + thumbnails')
+      lines.push('- Info: nombre, precio, descripción')
+      lines.push('- Variantes (selector visual)')
+      lines.push('- Stock indicator')
+      lines.push('- CTA: "Agregar al carrito" o "Consultar por WhatsApp"')
+      lines.push('- Productos relacionados')
+    } else if (page.includes('Checkout')) {
+      lines.push('- Progress bar del paso actual')
+      lines.push('- Formulario del paso')
+      lines.push('- Resumen sticky (desktop)')
+      lines.push('- CTA principal ancho completo')
+    } else if (page === 'Carrito') {
+      lines.push('- Lista items con imagen, cantidad, precio')
+      lines.push('- Cupón de descuento')
+      lines.push('- Resumen: subtotal, envío, total')
+      lines.push('- CTA checkout')
+    } else if (page === 'Seguimiento de Pedido') {
+      lines.push('- Timeline visual de estados')
+      lines.push('- Detalles del pedido')
+      lines.push('- Info de tracking')
+    } else if (page === 'Sobre Nosotros') {
+      lines.push('- Hero con imagen de equipo/local')
+      lines.push('- Historia del negocio')
+      lines.push('- Equipo o valores')
+      lines.push('- CTA contacto')
+    } else if (page === 'FAQ') {
+      lines.push('- Título "Preguntas Frecuentes"')
+      lines.push('- Accordion con preguntas/respuestas')
+      lines.push('- CTA contacto si no encuentra respuesta')
+    } else if (page === 'Contacto') {
+      lines.push('- Info: dirección, teléfono, email, horarios')
+      lines.push('- Mapa (si aplica)')
+      lines.push('- Formulario de contacto')
+      lines.push('- Redes sociales')
+    } else if (page.includes('404')) {
+      lines.push('- Ilustración o ícono grande')
+      lines.push('- "Página no encontrada"')
+      lines.push('- Links a home, catálogo, contacto')
+    } else if (page.includes('Error')) {
+      lines.push('- Mensaje de error')
+      lines.push('- Botón reintentar')
+      lines.push('- Link a home')
+    } else if (page.includes('Términos')) {
+      lines.push('- Título')
+      lines.push('- Texto legal en secciones')
+      lines.push('- Fecha de actualización')
+    }
+    lines.push('')
+  })
+
+  // 8. Animations
+  lines.push('## 8. Animaciones', '')
+  const animSpecs = {
+    none: 'Sin animaciones. Solo transiciones CSS mínimas.',
+    subtle: 'Fade-in scroll, hover cards scale(1.02), menú slide 300ms, botones active scale(0.98)',
+    full: 'Entrada escalonada hero, parallax sutil, microinteracciones, magnetic hover, page transitions',
+  }
+  lines.push(`${animSpecs[animLevel] || animSpecs.subtle}`)
+  lines.push('')
+
+  // 9. Assets
+  lines.push('## 9. Assets', '')
+  lines.push(`| Recurso | Estado |`)
+  lines.push(`|---|---|`)
+  lines.push(`| Logo | ${visual.logo?.available ? `Sí (${visual.logo.format})` : 'No — generar o solicitar'} |`)
+  lines.push(`| Hero | ${assets.missing?.includes('hero') ? 'No — usar Unsplash' : 'Sí'} |`)
+  lines.push(`| Productos | ${assets.missing?.includes('productos') ? 'No — usar Unsplash' : 'Sí'} |`)
+  lines.push('')
+
+  // 10. Integrations
+  lines.push('## 10. Integraciones Visuales', '')
+  if (hasCheckout) lines.push('- MercadoPago badge: footer, checkout, producto')
+  if (plan === 'empresa' && technical.correoArgentinoRequested) lines.push('- Correo Argentino badge')
+  if (plan === 'empresa' && technical.enviaRequested) lines.push('- Envia.com badge')
+  if (plan === 'emprendimiento') lines.push('- Envíos badge')
+  lines.push('- WhatsApp botón flotante verde')
+  if (hasCheckout && technical.resendRequested) lines.push('- Email ícono footer')
+  lines.push('')
+
+  // 11. Notes for Stitch
+  lines.push('## 11. Notas para Stitch', '')
+  lines.push('')
+  lines.push('### Prioridades')
+  lines.push('1. Mobile-first: diseñar 375px primero')
+  lines.push('2. Conversión: CTA claro en cada página')
+  lines.push('3. Confianza: badges de seguridad visibles')
+  lines.push('4. Consistencia: seguir tokens definidos')
+  lines.push('')
+  lines.push('### Evitar')
+  lines.push('- ❌ Gradientes genéricos sin relación marca')
+  lines.push('- ❌ Glassmorphism sin propósito')
+  lines.push('- ❌ Bordes > 20px en contenedores')
+  lines.push('- ❌ Animaciones en todos los elementos')
+  lines.push('- ❌ Hero genérico sobre stock photo')
+  lines.push('- ❌ Inter/Roboto/Lato por defecto')
+  lines.push('')
+  lines.push('### Incluir siempre')
+  lines.push('- ✅ Header + Footer en todas las pantallas')
+  lines.push('- ✅ Estados hover y active')
+  lines.push('- ✅ Estados loading y empty')
+  lines.push('- ✅ Badges para estados (nuevo, oferta, agotado)')
+  lines.push('')
+  lines.push('### Flujo de trabajo')
+  lines.push('1. Sistema de diseño base (colores, tipografía)')
+  lines.push('2. Header y Footer')
+  lines.push('3. Home completa')
+  lines.push('4. Catálogo y Producto')
+  if (hasCheckout) {
+    lines.push('5. Carrito y Checkout (4 pasos)')
+    lines.push('6. Seguimiento')
+    lines.push('7. Páginas opcionales')
+    lines.push('8. Estados de error')
+    lines.push('9. Revisar responsive')
+    lines.push('10. Exportar assets')
+  } else {
+    lines.push('5. Páginas opcionales')
+    lines.push('6. Estados de error')
+    lines.push('7. Revisar responsive')
+    lines.push('8. Exportar assets')
+  }
+  lines.push('')
+
+  // Footer
+  lines.push('---', '')
+  lines.push('**Documento generado por SitioHoy v2.0**')
+  lines.push('**Para uso exclusivo con Stitch**')
+  lines.push('**Instrucciones:** Copiar este documento completo en Stitch para generar el diseño.')
+  lines.push('**ID del proyecto Stitch:** [COMPLETAR DESPUÉS DE GENERAR EN STITCH]')
+  lines.push('')
+
+  return lines.join('\n')
 }
 
 function buildCopyGuide(intake, integrations) {

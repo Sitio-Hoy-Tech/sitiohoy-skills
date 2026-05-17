@@ -81,8 +81,8 @@ if (!existsSync(path.join(root, '.env.example'))) {
   add('warning', 'Falta .env.example.', '.env.example')
 }
 
-if (!existsSync(path.join(root, '.sitiohoy', 'design', 'design-brief-stitch.md'))) {
-  add('warning', 'Falta .sitiohoy/design/design-brief-stitch.md. Los módulos visuales requieren diseño en Stitch.', '.sitiohoy/design/design-brief-stitch.md')
+if (!existsSync(path.join(root, '.sitiohoy', 'design', 'DESIGN.md'))) {
+  add('warning', 'Falta .sitiohoy/design/DESIGN.md. Los módulos visuales requieren el documento de diseño para Stitch.', '.sitiohoy/design/DESIGN.md')
 }
 
 if (!existsSync(path.join(root, '.sitiohoy', 'copy-guide.md'))) {

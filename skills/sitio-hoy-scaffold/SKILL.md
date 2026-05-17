@@ -36,18 +36,19 @@ Crear una base consistente antes de escribir UI:
 - scripts de QA base
 - scripts operativos: `brief-from-intake`, `preflight`, `module-close`, `secret-scan`, `visual-audit`, `sitiohoy:e2e`, `audit`, smoke tests de integraciones y validador remoto Supabase
 
-## Pre-requisito: Diseño en Stitch (BLOQUEANTE)
+## Pre-requisito: Diseño con Stitch (BLOQUEANTE)
 
-**Stitch es obligatorio. No hay alternativa manual. Si no está conectado, PARAR.**
+**Stitch es obligatorio. No hay alternativa manual. Sin diseño de Stitch, PARAR.**
 
 Antes de comenzar módulos de UI (1-6):
-1. Ejecutar `mcp__pencil__get_editor_state` — si falla, **BLOQUEAR** e informar al usuario:
-   > "Stitch no está conectado. Necesito que lo conectes para continuar con el diseño. No puedo avanzar sin él."
-2. `.sitiohoy/design/design-brief-stitch.md` debe existir
-3. El diseño debe estar creado en Stitch (frames de todas las páginas, mobile + desktop)
-4. Tomar screenshots de referencia con `get_screenshot` antes de implementar cada página
-5. Tokens de diseño (colores, tipografía, espaciado) deben coincidir con el .pen file
-6. Si Stitch se desconecta durante implementación, **PARAR** y pedir reconexión
+1. Verificar que `.sitiohoy/design/DESIGN.md` existe (generado automáticamente por el briefing)
+2. El DESIGN.md debe haber sido enviado manualmente a Stitch
+3. El diseño debe estar generado en Stitch (todas las páginas, mobile + desktop)
+4. El ID del proyecto de Stitch debe estar guardado en `.sitiohoy/design/stitch-project-id.txt`
+5. Assets exportados desde Stitch deben estar en `_assets-cliente/stitch/`
+6. Tokens de diseño (colores, tipografía, espaciado) deben coincidir con el diseño de Stitch
+7. Si el diseño no está listo, **BLOQUEAR** e informar al usuario:
+   > "Falta el diseño de Stitch. Necesito que envíes el DESIGN.md a Stitch y generes el diseño completo antes de continuar con la implementación."
 
 ## Workflow
 
@@ -103,13 +104,14 @@ Antes de comenzar módulos de UI (1-6):
 ### Extracción de tokens desde Stitch
 
 Si el diseño ya fue creado en Stitch:
-1. Ejecutar `mcp__pencil__get_variables` para obtener design tokens
-2. Mapear variables Stitch → `styles/tokens.css`:
+1. Revisar el diseño en Stitch y extraer los tokens visualmente
+2. Mapear tokens del diseño de Stitch → `styles/tokens.css`:
    - Colors → `--color-*`
    - Spacing → `--space-*`  
    - Typography → `--font-*`, `--text-*`
    - Radius → `--radius-*`
-3. No inventar tokens — usar exactamente los del diseño
+3. No inventar tokens — usar exactamente los del diseño de Stitch
+4. El DESIGN.md ya contiene todos los tokens esperados — usarlos como guía
 
 ## Reglas
 

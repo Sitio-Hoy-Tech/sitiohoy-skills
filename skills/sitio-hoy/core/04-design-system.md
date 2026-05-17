@@ -31,24 +31,21 @@ Cada proyecto debe tener dirección visual propia: paleta, tipografías, composi
 
 ## 1. Generación del Design System
 
-### Con AIDesigner MCP (Claude Code / Cursor / Windsurf)
+### Con Stitch (Flujo SitioHoy — OBLIGATORIO)
 
-```bash
-npx -y @aidesigner/agent-skills init          # Claude Code
-npx -y @aidesigner/agent-skills init cursor   # Cursor
-```
+1. El briefing genera automáticamente `.sitiohoy/design/DESIGN.md` con todo el sistema de diseño
+2. Enviar el DESIGN.md manualmente a Stitch (copiar y pegar en el prompt)
+3. Stitch genera el diseño visual completo siguiendo el documento al pie de la letra
+4. Extraer los tokens del diseño generado por Stitch y volcarlos en `styles/tokens.css`
+5. El DESIGN.md ya contiene el rationale completo de cada decisión de diseño
 
-1. Proporcionar contexto del brief: rubro, personalidad de marca, colores (si los hay), referentes visuales
-2. Solicitar: *"Genera un design system completo para una tienda [rubro] con paleta cromática única, tipografía variable, espaciado, radios y componentes de alta conversión. Quiero 3 variantes."*
-3. Elegir la variante más diferenciada respecto a competidores del rubro
-4. Volcar todos los tokens generados en `styles/tokens.css`
+### Sin Stitch (solo como referencia)
 
-### Sin MCP (cualquier IA)
-
-1. Leer el brief: estilo deseado, colores de marca (si existen), rubro, audiencia
-2. Generar 3 propuestas de paleta y presentarlas al cliente con descripción del mood
-3. Cliente elige → generar `styles/tokens.css` con esa paleta
-4. Crear `DESIGN.md` con el rationale de cada decisión
+Si Stitch no está disponible temporalmente:
+1. Leer el brief y el DESIGN.md generado
+2. Generar `styles/tokens.css` manualmente basado en las especificaciones del DESIGN.md
+3. No improvisar fuera de lo especificado en el DESIGN.md
+4. Resolver la conexión con Stitch antes de implementar UI final
 
 ### Template de `styles/tokens.css`
 
@@ -450,9 +447,10 @@ Además del puntaje:
 
 ## 12. Logos — Si el cliente no tiene
 
-Generar con AIDesigner MCP o describir en detalle para generación manual:
+Solicitar al cliente o generar con herramientas de diseño:
 
 - Nombre del negocio + rubro + estilo buscado + paleta ya definida
 - Siempre generar: variante horizontal + variante cuadrada (ícono)
 - Formatos: PNG fondo transparente + SVG
 - Verificar legibilidad en 32px (favicon) y 200px (header)
+- Si Stitch generó un logo como parte del diseño, exportarlo y usarlo

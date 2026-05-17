@@ -66,22 +66,30 @@ Plan Empresa       → leer plans/empresa/INDEX.md
 El INDEX.md de cada plan lista exactamente qué archivos cargar y en qué orden.
 **Cargar solo los archivos del plan activo — no cargar integraciones innecesarias.**
 
-### Paso 2.5 — Diseño en Stitch (OBLIGATORIO)
+### Paso 2.5 — Diseño con Stitch (OBLIGATORIO — Flujo Manual)
 
-**Stitch es obligatorio. Sin diseño no se implementa UI. No hay fallback manual.**
+**Stitch es la única herramienta de diseño. Sin diseño de Stitch no se implementa UI.**
 
-1. **Health check**: ejecutar `mcp__pencil__get_editor_state`.
-   - Si falla: **PARAR**. Informar al usuario que Stitch no está conectado y pedir que lo conecte. No continuar hasta que responda.
-   - Si responde: continuar.
-2. Verificar que `.sitiohoy/design/design-brief-stitch.md` existe (generado por briefing-server).
-3. Enviar `design-brief-stitch.md` a Stitch via MCP (`mcp__pencil__batch_design`).
-4. Revisar design screenshots con `mcp__pencil__get_screenshot`.
-5. Si el diseño necesita ajustes, usar `mcp__pencil__replace_all_matching_properties` o `mcp__pencil__set_variables`.
-6. Proceder con implementación usando el diseño como referencia pixel-perfect.
-7. Los design tokens del .pen file se trasladan a `styles/tokens.css`.
+1. Verificar que `.sitiohoy/design/DESIGN.md` existe (generado automáticamente por el briefing).
+2. **Enviar el DESIGN.md a Stitch MANUALMENTE:**
+   - Abrir Stitch en el navegador
+   - Crear un nuevo proyecto
+   - Copiar y pegar TODO el contenido de `.sitiohoy/design/DESIGN.md` en el prompt de Stitch
+   - Pedirle a Stitch que genere el diseño completo siguiendo el documento al pie de la letra
+3. **Esperar a que Stitch genere el diseño.** Esto puede tomar varios minutos.
+4. **Copiar el ID del proyecto de Stitch** y guardarlo en `.sitiohoy/design/stitch-project-id.txt`
+5. **Revisar cada pantalla** en Stitch:
+   - Home, Catálogo, Producto, Carrito (si aplica), Checkout (si aplica)
+   - Verificar responsive en los breakpoints definidos
+   - Confirmar que los colores y tipografía coinciden con el DESIGN.md
+6. **Exportar assets** desde Stitch (imágenes, iconos, etc.) y guardar en `_assets-cliente/stitch/`
+7. Proceder con implementación usando el diseño de Stitch como referencia pixel-perfect.
+8. Los design tokens del diseño se trasladan a `styles/tokens.css`.
 
-**Antes de CADA módulo visual (1-6):** repetir health check con `get_editor_state`.
-Si se pierde conexión en cualquier momento, bloquear y pedir reconexión.
+**IMPORTANTE:**
+- No existe MCP automático para Stitch. El envío del DESIGN.md es **manual**.
+- El ID del proyecto de Stitch es necesario para que la IA entienda qué diseño implementar.
+- Sin DESIGN.md completo, Stitch no podrá generar un diseño preciso.
 
 Para el flujo detallado, consultar `references/stitch-workflow.md`.
 
@@ -163,7 +171,7 @@ Usar `sitio-hoy-launch-automation` solo cuando QA esté aprobado o documentado.
 - Modo silencioso activo en todo momento
 - Una pregunta → nunca volver a pedir lo ya dado
 - Solo hablar ante: error crítico / dato faltante / fin de módulo / bloqueo externo / Stitch desconectado
-- **Stitch obligatorio**: antes de cada módulo visual (1-6), verificar `mcp__pencil__get_editor_state`. Si falla, PARAR y pedir al usuario que conecte Stitch. No diseñar manualmente, no inventar, no saltar.
+- **Stitch obligatorio**: el diseño debe salir de Stitch usando el DESIGN.md generado por el briefing. Sin DESIGN.md no hay diseño, sin diseño no hay implementación UI. El envío a Stitch es manual.
 - Formato de fin de módulo: `Módulo N ✅ · Listo para N+1`
 - Al finalizar cada módulo: ejecutar `npm run sitiohoy:tracking -- --modulo N --nombre "Nombre"` para actualizar `proyecto-tracking.json` automáticamente
 - En ese tracking, completar `--checks` con los IDs cumplidos de `.sitiohoy/checklists/module-checks.json`

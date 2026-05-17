@@ -151,10 +151,10 @@ jerarquía visual y patrones de layout.
 ## Component Seeds por Rubro
 
 El archivo `references/component-seeds.md` contiene una biblioteca de componentes
-recomendados según el rubro del negocio. Al generar el `design-brief-stitch.md` y
+recomendados según el rubro del negocio. Al generar el `DESIGN.md` y
 los context packs, considerar estos seeds para:
 
-1. Sugerir componentes específicos del rubro en `layout-recipe.md`
+1. Sugerir componentes específicos del rubro en el DESIGN.md
 2. Alimentar a Stitch con estructuras base adecuadas al tipo de negocio
 3. Evitar diseños genéricos — cada rubro tiene patrones de conversión distintos
 
@@ -186,21 +186,26 @@ Esperar a que los tres grupos terminen antes de pasar al scaffold.
 
 ## Integración con Stitch (Diseño)
 
-Después de generar los context packs, el diseño se crea con Stitch:
+Después de generar los context packs, el diseño se crea con Stitch usando el flujo manual:
 
-1. Leer `.sitiohoy/design/design-brief-stitch.md`
-2. Enviar a Stitch via MCP (`batch_design`) con las especificaciones
-3. Stitch genera el diseño visual en archivos .pen
-4. Usar `get_screenshot` para ver el resultado
-5. Si necesita ajustes, usar `replace_all_matching_properties` o `set_variables`
-6. El diseño aprobado se usa como referencia pixel-perfect para implementación
+1. Leer `.sitiohoy/design/DESIGN.md` (generado automáticamente por el briefing)
+2. **Enviar el DESIGN.md a Stitch MANUALMENTE:**
+   - Abrir Stitch en el navegador
+   - Crear nuevo proyecto
+   - Copiar y pegar el contenido completo del DESIGN.md
+   - Solicitar generación del diseño completo
+3. Esperar a que Stitch genere todas las pantallas
+4. **Copiar el ID del proyecto de Stitch** y guardarlo en `.sitiohoy/design/stitch-project-id.txt`
+5. Revisar cada pantalla en Stitch contra el DESIGN.md
+6. Exportar assets desde Stitch a `_assets-cliente/stitch/`
+7. El diseño aprobado se usa como referencia pixel-perfect para implementación
 
 ### Reglas de diseño con Stitch
-- SIEMPRE generar el design-brief-stitch.md antes de invocar Stitch
-- Cada página tiene su propio canvas en el .pen file
-- Revisar el screenshot antes de implementar
-- Los design tokens del .pen file se trasladan a tokens.css
-- No inventar diseño — implementar lo que Stitch generó
+- SIEMPRE usar el DESIGN.md generado automáticamente — no crear briefs manuales
+- El envío a Stitch es manual: copiar y pegar el DESIGN.md completo
+- Guardar el ID del proyecto de Stitch para referencia durante implementación
+- Los design tokens del diseño se trasladan a `styles/tokens.css`
+- No inventar diseño — implementar exactamente lo que Stitch generó
 
 ## Reglas
 

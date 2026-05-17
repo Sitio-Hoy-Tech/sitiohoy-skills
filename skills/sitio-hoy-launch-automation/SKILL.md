@@ -65,8 +65,8 @@ No ejecutar deploy real si faltan QA, env vars o credenciales. Primero generar e
 
 Antes de deploy:
 - Confirmar que la implementación respeta el diseño de Stitch
-- Ejecutar `mcp__pencil__get_screenshot` de cada página del diseño
-- Comparar con screenshots de `npm run sitiohoy:visual-audit`
+- Comparar el sitio implementado con el diseño en Stitch página por página
+- Revisar screenshots de `npm run sitiohoy:visual-audit` contra el DESIGN.md
 - Si hay discrepancias mayores, resolver antes de deploy
 
 ## Artefactos generados
