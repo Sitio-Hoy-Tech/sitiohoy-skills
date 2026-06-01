@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-05-09",
-  "total": 6,
+  "updated_at": "2026-06-01",
+  "total": 9,
   "templates": [
     {
       "id": "taxonomy",
@@ -153,6 +153,98 @@
       ],
       "description": "Storefront completo con carrito, checkout, cuenta de usuario. Stack muy cercano al de SitioHoy Plan Empresa.",
       "stars": 3000
+    },
+    {
+      "id": "btahir--next-shopify-starter",
+      "name": "next-shopify-starter",
+      "source": "github",
+      "repo": "btahir/next-shopify-starter",
+      "demo_url": "https://doggystickers.vercel.app",
+      "preview_url": "https://github.com/btahir/next-shopify-starter",
+      "tags": [
+        "ecommerce",
+        "ecommerce-website",
+        "nextjs",
+        "nextjs-starter",
+        "nextjs-template",
+        "shopify",
+        "shopify-api",
+        "tailwind",
+        "tailwindcss"
+      ],
+      "plan_fit": [
+        "emprendimiento",
+        "empresa"
+      ],
+      "industry": [],
+      "description": "Nextjs + Tailwind CSS + Shopify Starter",
+      "stars": 904
+    },
+    {
+      "id": "olafsulich--fullstack-nextjs-ecommerce",
+      "name": "fullstack-nextjs-ecommerce",
+      "source": "github",
+      "repo": "olafsulich/fullstack-nextjs-ecommerce",
+      "demo_url": null,
+      "preview_url": "https://github.com/olafsulich/fullstack-nextjs-ecommerce",
+      "tags": [
+        "authentication",
+        "docker",
+        "next-auth",
+        "nextauth",
+        "nextjs",
+        "nextjs-boilerplate",
+        "nextjs-starter",
+        "nextjs-template",
+        "nextjs-typescript",
+        "prisma",
+        "react-query",
+        "sentry",
+        "tailwindcss",
+        "typescript"
+      ],
+      "plan_fit": [
+        "emprendimiento",
+        "empresa"
+      ],
+      "industry": [],
+      "description": "Fullstack Next.js E-Commerce made with NextAuth + Prisma, Docker + TypeScript + React Query + Stripe + Tailwind Sentry and much more 🛒",
+      "stars": 847
+    },
+    {
+      "id": "marcoscamara01--ecommerce-template",
+      "name": "ecommerce-template",
+      "source": "github",
+      "repo": "MarcosCamara01/ecommerce-template",
+      "demo_url": "https://ecommerce-template-mpc.vercel.app",
+      "preview_url": "https://github.com/MarcosCamara01/ecommerce-template",
+      "tags": [
+        "better-auth",
+        "css3",
+        "drizzle",
+        "drizzle-orm",
+        "ecommerce",
+        "ecommerce-application",
+        "ecommerce-website",
+        "mongodb",
+        "next-auth",
+        "nextjs",
+        "nextjs-ecommerce",
+        "nextjs-template",
+        "react",
+        "stripe-api",
+        "supabase",
+        "tailwind",
+        "tailwindcss",
+        "tanstack-query"
+      ],
+      "plan_fit": [
+        "emprendimiento",
+        "empresa"
+      ],
+      "industry": [],
+      "description": "An ecommerce template built with NextJS 16, TypeScript and TailwindCSS",
+      "stars": 210
     }
   ]
 }
