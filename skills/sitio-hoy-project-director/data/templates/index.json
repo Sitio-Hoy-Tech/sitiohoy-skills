@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-06-01",
+  "updated_at": "2026-07-01",
   "total": 9,
   "templates": [
     {
@@ -178,7 +178,7 @@
       ],
       "industry": [],
       "description": "Nextjs + Tailwind CSS + Shopify Starter",
-      "stars": 904
+      "stars": 903
     },
     {
       "id": "olafsulich--fullstack-nextjs-ecommerce",
@@ -209,7 +209,7 @@
       ],
       "industry": [],
       "description": "Fullstack Next.js E-Commerce made with NextAuth + Prisma, Docker + TypeScript + React Query + Stripe + Tailwind Sentry and much more 🛒",
-      "stars": 847
+      "stars": 850
     },
     {
       "id": "marcoscamara01--ecommerce-template",
@@ -244,7 +244,7 @@
       ],
       "industry": [],
       "description": "An ecommerce template built with NextJS 16, TypeScript and TailwindCSS",
-      "stars": 210
+      "stars": 215
     }
   ]
 }
